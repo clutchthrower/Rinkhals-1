@@ -259,12 +259,12 @@ class RinkhalsUiApp(BaseApp):
 
             button_ota = lvr.button(panel_row2)
             button_ota.set_flex_grow(1)
-            button_ota.set_text('Install & Updates')
+            button_ota.set_text('Updates')
             button_ota.add_event_cb(lambda e: self.show_screen(self.screen_ota), lv.EVENT_CODE.CLICKED, None)
 
             button_settings = lvr.button(panel_row2)
             button_settings.set_flex_grow(1)
-            button_settings.set_text('Advanced settings')
+            button_settings.set_text('Settings')
             button_settings.set_style_text_color(lvr.COLOR_DANGER, lv.STATE.DEFAULT)
             button_settings.add_event_cb(lambda e: self.show_screen(self.screen_advanced), lv.EVENT_CODE.CLICKED, None)
 
