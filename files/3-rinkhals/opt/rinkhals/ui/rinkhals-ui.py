@@ -232,26 +232,38 @@ class RinkhalsUiApp(BaseApp):
 
         if self.screen_main:
             self.screen_main.set_flex_flow(lv.FLEX_FLOW.COLUMN)
-            self.screen_main.set_flex_align(lv.FLEX_ALIGN.START, lv.FLEX_ALIGN.CENTER, lv.FLEX_ALIGN.CENTER)
+            self.screen_main.set_flex_align(lv.FLEX_ALIGN.CENTER, lv.FLEX_ALIGN.CENTER, lv.FLEX_ALIGN.CENTER)
             self.screen_main.set_style_pad_row(lvr.get_global_margin(), lv.STATE.DEFAULT)
 
-            button_apps = lvr.button(self.screen_main)
-            button_apps.set_width(lv.pct(100))
+            # Top row: Manage apps | App Store
+            panel_row1 = lvr.panel(self.screen_main, flex_flow=lv.FLEX_FLOW.ROW)
+            panel_row1.set_width(lv.pct(100))
+            panel_row1.set_style_pad_column(lvr.get_global_margin(), lv.STATE.DEFAULT)
+            panel_row1.set_style_pad_all(0, lv.STATE.DEFAULT)
+
+            button_apps = lvr.button(panel_row1)
+            button_apps.set_flex_grow(1)
             button_apps.set_text('Manage apps')
             button_apps.add_event_cb(lambda e: self.show_screen(self.screen_apps), lv.EVENT_CODE.CLICKED, None)
 
-            button_store = lvr.button(self.screen_main)
-            button_store.set_width(lv.pct(100))
+            button_store = lvr.button(panel_row1)
+            button_store.set_flex_grow(1)
             button_store.set_text('App Store')
             button_store.add_event_cb(lambda e: self.show_screen(self.screen_store), lv.EVENT_CODE.CLICKED, None)
 
-            button_ota = lvr.button(self.screen_main)
-            button_ota.set_width(lv.pct(100))
+            # Bottom row: Install & Updates | Advanced settings
+            panel_row2 = lvr.panel(self.screen_main, flex_flow=lv.FLEX_FLOW.ROW)
+            panel_row2.set_width(lv.pct(100))
+            panel_row2.set_style_pad_column(lvr.get_global_margin(), lv.STATE.DEFAULT)
+            panel_row2.set_style_pad_all(0, lv.STATE.DEFAULT)
+
+            button_ota = lvr.button(panel_row2)
+            button_ota.set_flex_grow(1)
             button_ota.set_text('Install & Updates')
             button_ota.add_event_cb(lambda e: self.show_screen(self.screen_ota), lv.EVENT_CODE.CLICKED, None)
 
-            button_settings = lvr.button(self.screen_main)
-            button_settings.set_width(lv.pct(100))
+            button_settings = lvr.button(panel_row2)
+            button_settings.set_flex_grow(1)
             button_settings.set_text('Advanced settings')
             button_settings.set_style_text_color(lvr.COLOR_DANGER, lv.STATE.DEFAULT)
             button_settings.add_event_cb(lambda e: self.show_screen(self.screen_advanced), lv.EVENT_CODE.CLICKED, None)
@@ -1155,13 +1167,13 @@ class RinkhalsUiApp(BaseApp):
 
             icon_back = lvr.button_icon(title_bar)
             icon_back.set_align(lv.ALIGN.LEFT_MID)
-            icon_back.set_text('')
+            icon_back.set_text('\ue314')
             icon_back.add_event_cb(lambda e: self.show_screen(self.screen_main), lv.EVENT_CODE.CLICKED, None)
 
             icon_refresh = lvr.button_icon(title_bar)
             icon_refresh.add_event_cb(lambda e: self.show_screen(self.screen_store), lv.EVENT_CODE.CLICKED, None)
             icon_refresh.set_align(lv.ALIGN.RIGHT_MID)
-            icon_refresh.set_text('')
+            icon_refresh.set_text('\ue5d5')
 
             self.screen_store.panel_apps = None
 
@@ -1178,7 +1190,7 @@ class RinkhalsUiApp(BaseApp):
 
             icon_back = lvr.button_icon(title_bar)
             icon_back.set_align(lv.ALIGN.LEFT_MID)
-            icon_back.set_text('')
+            icon_back.set_text('\ue314')
             icon_back.add_event_cb(lambda e: self.show_screen(self.screen_store), lv.EVENT_CODE.CLICKED, None)
 
             self.screen_store_app.label_title = lvr.title(title_bar)
@@ -1313,12 +1325,10 @@ class RinkhalsUiApp(BaseApp):
                             label_ver.set_text(f'v{app_version}')
 
                         if is_installed:
-                            tag_installed = lvr.tag(panel_app)
-                            tag_installed.set_align(lv.ALIGN.RIGHT_MID)
-                            tag_installed.remove_flag(lv.OBJ_FLAG.CLICKABLE)
-                            tag_installed.set_color(lvr.COLOR_PRIMARY)
-                            tag_installed.set_icon('')
-                            tag_installed.set_text('Installed')
+                            label_installed = lvr.subtitle(panel_app)
+                            label_installed.set_align(lv.ALIGN.RIGHT_MID)
+                            label_installed.set_style_text_color(lvr.COLOR_PRIMARY, lv.STATE.DEFAULT)
+                            label_installed.set_text('Installed')
 
             except Exception as ex:
                 logging.error(f'App store fetch failed: {ex}')
