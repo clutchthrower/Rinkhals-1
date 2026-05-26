@@ -1283,7 +1283,6 @@ class Kobra:
                     logging.info('[Kobra] Injected objects list')
                     
                     objects = [
-                        "motion_report",
                         "gcode_macro t0",
                         "gcode_macro t1",
                         "gcode_macro t2",
@@ -1292,7 +1291,7 @@ class Kobra:
                         "heaters",
                         "respond",
                         "display_status",
-                            "exclude_object",
+                        "exclude_object",
                         "extruder",
                         "fan",
                         "gcode_move",
@@ -1313,6 +1312,12 @@ class Kobra:
                         "bed_mesh \"default\"",
                         "idle_timeout"
                     ]
+
+                    # For KS1M: Do not expose motion_report to avoid GoKlipper panic:
+                    # "interface conversion: interface {} is chelper._Ctype_struct_pull_move, not *chelper._Ctype_struct_pull_movegoroutine"
+                    # For other models, insert motion_report at same position as before to avoid any regression
+                    if self.KOBRA_MODEL_CODE != 'KS1M':
+                        objects.insert(0, "motion_report")
                     
                     web_request.endpoint = 'gcode/help'
                     result = await original_request(me, web_request)
