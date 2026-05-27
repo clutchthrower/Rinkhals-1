@@ -257,6 +257,20 @@ ACE_AUTO_FEED_DEAD_PRINT_STATES = frozenset({
     "cancelled", "complete", "error", "standby"
 })
 
+# Filename prefixes that indicate the gcode is a tool/maintenance operation
+# rather than a print job (Anycubic generates these via the touchscreen for
+# refill, load/unload, and similar ACE maintenance flows). Auto-feed must NOT
+# run for these — the gcode drives ACE loading on its own, and racing it
+# against an auto-feed task has been observed to crash gklib on K3 (issue #20).
+# Match on prefix because Anycubic appends slot, material, and timing suffixes
+# (e.g. filament_refill_spool_2_ABS_0.2_30m0s.gcode).
+ACE_NON_PRINT_GCODE_PREFIXES = (
+    "filament_refill_",
+    "filament_load_",
+    "filament_unload_",
+    "filament_change_",
+)
+
 FILAMENT_POS_UNKNOWN = -1
 FILAMENT_POS_UNLOADED = 0 # Parked in gate
 FILAMENT_POS_HOMED_GATE = 1 # Homed at either gate or gear sensor (currently assumed mutually exclusive sensors)
@@ -2452,7 +2466,22 @@ class MmuAcePatcher:
             #   2. mapping[0].ams_index — the first slot mapped from the slicer's
             #      tool order. Correct for single-colour prints and for the initial
             #      feed of multi-colour prints (subsequent T-commands switch).
-            if self.ace.loaded_gate == TOOL_GATE_UNKNOWN and mapping:
+            #
+            # Skip non-print tool/maintenance gcodes (refill, load, unload, etc.)
+            # outright. Those scripts drive ACE loading themselves; spawning an
+            # auto-feed task in parallel races gklib and has been observed to
+            # crash it on K3 (issue #20).
+            _filename = (print_data or {}).get("filename") or ""
+            _is_non_print_op = any(
+                _filename.startswith(p) for p in ACE_NON_PRINT_GCODE_PREFIXES
+            )
+            if _is_non_print_op:
+                logging.info(
+                    f"patch_print_data: filename {_filename!r} is a tool/maintenance "
+                    f"operation; skipping auto-feed (issue #20)"
+                )
+
+            if not _is_non_print_op and self.ace.loaded_gate == TOOL_GATE_UNKNOWN and mapping:
                 if self.ace.gate != TOOL_GATE_UNKNOWN:
                     candidate = self.ace.gate
                     source = "Color Match (self.ace.gate)"
