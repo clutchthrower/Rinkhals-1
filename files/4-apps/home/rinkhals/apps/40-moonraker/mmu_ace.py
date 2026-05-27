@@ -257,6 +257,54 @@ ACE_AUTO_FEED_DEAD_PRINT_STATES = frozenset({
     "cancelled", "complete", "error", "standby"
 })
 
+# Standard gcode directory used by the Anycubic firmware. The metadata
+# pre-processor appends a "; referenced_tools = N,M,..." trailer to every
+# processed file at this location.
+ACE_GCODE_DIR = "/userdata/app/gk/printer_data/gcodes"
+
+# How much of the file's tail to scan when looking for the trailer. The
+# trailer is the last line, so a small window is enough. Avoids reading
+# multi-MB gcode files when we only need ~50 bytes.
+ACE_REFERENCED_TOOLS_TAIL_BYTES = 4096
+
+
+def _read_referenced_tools(gcode_path):
+    """Return the 0-indexed list of slicer tools referenced by a gcode file.
+
+    mmu_ace_metadata.process_file appends a "; referenced_tools = N,M,..."
+    comment to every file it processes during upload. Reading the file's tail
+    lets patch_print_data know which tools the slicer actually uses without
+    re-parsing the whole gcode body.
+
+    Returns the parsed list of ints, or None if the trailer is missing,
+    malformed, or the file can't be read. Callers should treat None as
+    "unknown" and fall back to safer, more conservative behaviour.
+    """
+    try:
+        if not gcode_path or not os.path.isfile(gcode_path):
+            return None
+        size = os.path.getsize(gcode_path)
+        read_from = max(0, size - ACE_REFERENCED_TOOLS_TAIL_BYTES)
+        with open(gcode_path, "rb") as f:
+            f.seek(read_from)
+            tail = f.read().decode("utf-8", errors="replace")
+        # Trailer format from mmu_ace_metadata.process_file:
+        #   ; referenced_tools = 0,2,3
+        for line in reversed(tail.splitlines()):
+            stripped = line.strip()
+            if stripped.startswith("; referenced_tools"):
+                _, _, value = stripped.partition("=")
+                tools = []
+                for tok in value.strip().split(","):
+                    tok = tok.strip()
+                    if not tok:
+                        continue
+                    tools.append(int(tok))
+                return sorted(set(tools))
+    except Exception as exc:
+        logging.warning(f"_read_referenced_tools failed for {gcode_path}: {exc}")
+    return None
+
 FILAMENT_POS_UNKNOWN = -1
 FILAMENT_POS_UNLOADED = 0 # Parked in gate
 FILAMENT_POS_HOMED_GATE = 1 # Homed at either gate or gear sensor (currently assumed mutually exclusive sensors)
@@ -2446,46 +2494,92 @@ class MmuAcePatcher:
             # Print flow currently doesn't issue FEED_FILAMENT; this hook fills
             # that gap). See issue #464.
             #
-            # Slot selection order:
-            #   1. self.ace.gate if set — honours touchscreen Color Match selection
-            #      (relies on #443 being fixed; safe fallback if not)
-            #   2. mapping[0].ams_index — the first slot mapped from the slicer's
-            #      tool order. Correct for single-colour prints and for the initial
-            #      feed of multi-colour prints (subsequent T-commands switch).
+            # Slot selection, in descending order of confidence:
+            #   1. self.ace.gate if set — touchscreen Color Match selection (#443).
+            #      Highest confidence: user explicitly picked.
+            #   2. ttg_map[detected_tools[0]] for a single-tool print — the slicer
+            #      told us in metadata which tool it actually uses, and the
+            #      printer's tool-to-gate map resolves it to a gate. High
+            #      confidence.
+            #   3. Skip otherwise (was: mapping[0].ams_index). For multi-tool
+            #      prints the gcode itself contains T-commands that gklib's
+            #      tool-change handler will execute, so auto-feed is unnecessary
+            #      and pre-loading the wrong slot causes a wasteful unload+reload
+            #      dance (issue #20).
             if self.ace.loaded_gate == TOOL_GATE_UNKNOWN and mapping:
+                candidate = None
+                source = None
+
                 if self.ace.gate != TOOL_GATE_UNKNOWN:
                     candidate = self.ace.gate
                     source = "Color Match (self.ace.gate)"
                 else:
-                    candidate = mapping[0]["ams_index"]
-                    source = "ams_box_mapping[0]"
+                    # Consult the metadata preprocessor's tool list rather than
+                    # guessing from mapping order. The trailer is appended by
+                    # mmu_ace_metadata.process_file during upload.
+                    filename = (print_data or {}).get("filename") or ""
+                    gcode_path = os.path.join(ACE_GCODE_DIR, filename.lstrip("/"))
+                    detected_tools = _read_referenced_tools(gcode_path)
 
-                # Reject a target gate the printer doesn't have. A stale Color
-                # Match value or a slicer emitting a slot index higher than the
-                # configured ACE gate count would otherwise resolve to an
-                # ID/INDEX pair pointing at a non-existent ACE, and the
-                # resulting FEED_FILAMENT response from gklib is undefined.
-                num_gates = sum(len(unit.gates) for unit in self.ace.units)
-                if not isinstance(candidate, int) or not 0 <= candidate < num_gates:
-                    logging.warning(
-                        f"patch_print_data: target gate {candidate!r} (via {source}) "
-                        f"out of range for {num_gates}-gate setup; skipping auto-feed"
-                    )
-                else:
-                    target_gate = candidate
-                    logging.info(
-                        f"patch_print_data: no filament currently loaded, "
-                        f"scheduling auto-feed for gate {target_gate} (via {source})"
-                    )
-                    # Cancel a poller left over from an earlier print-start attempt
-                    # (patch_print_data is re-entered on each kobra.py network retry)
-                    # so only one auto-feed can ever fire for this print.
-                    if self._auto_feed_task is not None and not self._auto_feed_task.done():
-                        logging.info("patch_print_data: cancelling stale auto-feed task")
-                        self._auto_feed_task.cancel()
-                    self._auto_feed_task = self.ace_controller.eventloop.create_task(
-                        self._auto_feed_at_print_start(target_gate)
-                    )
+                    if detected_tools is None:
+                        logging.info(
+                            "patch_print_data: detected_tools unknown for "
+                            f"{filename!r}, skipping auto-feed (no trailer found)"
+                        )
+                    elif len(detected_tools) == 0:
+                        logging.info(
+                            f"patch_print_data: detected_tools is empty for "
+                            f"{filename!r}, skipping auto-feed"
+                        )
+                    elif len(detected_tools) == 1:
+                        tool_index = detected_tools[0]
+                        if 0 <= tool_index < len(self.ace.ttg_map):
+                            candidate = self.ace.ttg_map[tool_index]
+                            source = f"detected_tools=[{tool_index}] → ttg_map[{tool_index}]"
+                        else:
+                            logging.warning(
+                                f"patch_print_data: detected tool {tool_index} out "
+                                f"of ttg_map range ({len(self.ace.ttg_map)}), "
+                                f"skipping auto-feed"
+                            )
+                    else:
+                        # Multi-tool print. The gcode contains T-commands;
+                        # gklib's tool-change handler will load the right slot
+                        # as soon as it encounters the first T. Pre-loading
+                        # would just force an unload+reload (issue #20).
+                        logging.info(
+                            f"patch_print_data: multi-tool print "
+                            f"(detected_tools={detected_tools}); "
+                            f"skipping auto-feed, gcode T-commands will handle it"
+                        )
+
+                if candidate is not None:
+                    # Reject a target gate the printer doesn't have. A stale Color
+                    # Match value or an out-of-range ttg_map entry would otherwise
+                    # resolve to an ID/INDEX pair pointing at a non-existent ACE,
+                    # and the resulting FEED_FILAMENT response from gklib is
+                    # undefined.
+                    num_gates = sum(len(unit.gates) for unit in self.ace.units)
+                    if not isinstance(candidate, int) or not 0 <= candidate < num_gates:
+                        logging.warning(
+                            f"patch_print_data: target gate {candidate!r} (via {source}) "
+                            f"out of range for {num_gates}-gate setup; skipping auto-feed"
+                        )
+                    else:
+                        target_gate = candidate
+                        logging.info(
+                            f"patch_print_data: no filament currently loaded, "
+                            f"scheduling auto-feed for gate {target_gate} (via {source})"
+                        )
+                        # Cancel a poller left over from an earlier print-start attempt
+                        # (patch_print_data is re-entered on each kobra.py network retry)
+                        # so only one auto-feed can ever fire for this print.
+                        if self._auto_feed_task is not None and not self._auto_feed_task.done():
+                            logging.info("patch_print_data: cancelling stale auto-feed task")
+                            self._auto_feed_task.cancel()
+                        self._auto_feed_task = self.ace_controller.eventloop.create_task(
+                            self._auto_feed_at_print_start(target_gate)
+                        )
 
         return print_data
 
