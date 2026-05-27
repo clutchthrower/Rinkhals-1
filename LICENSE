@@ -1,4 +1,4 @@
-The MIT License (MIT)
+MIT License
 
 Copyright (c) 2025 Julien Batonnet
 Copyright (c) 2026 Rinkhals Community contributors
@@ -20,16 +20,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
-
----
-
-The MIT License above applies to original Rinkhals code.
-
-Bundled third-party code and assets retain their own licenses, including but
-not limited to:
-
-- files/3-rinkhals/opt/rinkhals/ui/MaterialIcons-Regular.ttf
-  https://github.com/google/material-design-icons/blob/master/LICENSE
-- */icon.png
-  https://www.flaticon.com/free-icon/cobra_375098
