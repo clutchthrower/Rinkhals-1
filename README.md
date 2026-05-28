@@ -6,7 +6,7 @@
 Rinkhals is a custom firmware for some Anycubic Kobra 3D printers (specifically the ones running Kobra OS, see below for the details).
 
 The goal of this project is to expand existing Anycubic features with better compatibility, apps and more.
-I will likely not support all use cases, like running vanilla Klipper or your specific feature / plugin.
+This project will likely not support every use case, such as running vanilla Klipper or a specific feature / plugin.
 
 By using Rinkhals, you will keep all stock Anycubic features (print screen, Anycubic tools, calibration, ...) and get even more, like:
 - Mainsail, Fluidd (with Moonraker)
@@ -26,8 +26,6 @@ Here are the supported GoKlipper / K3-family printers and firmwares with the lat
 | Kobra 3 Max (+ combo) | `2.5.1.7` `2.5.2.8` |
 | Kobra 3 V2 (+ combo) | `1.1.0.4` `1.1.2.8` |
 | Kobra S1 Max (+ combo) | `2.6.6` `2.6.9.3` |
-
-🔴 - in testing, not yet ready
 
 The K4-family currently has a separate status:
 
@@ -49,7 +47,7 @@ In case you're wondering this project is named after rinkhals, a sub-species of 
 
 You can join the Rinkhals community on Discord: https://discord.gg/3mrANjpNJC
 
-Since people have been asking, I accept donations but please remember that I work on Rinkhals for fun and not for the money. I will not accept donations to work on specific bugs or features. Donation link is the Sponsor button at the top of the page.
+Since people have been asking, donations are accepted, but please remember this project is built for fun and not for the money. Donations will not be accepted to work on specific bugs or features. The donation link is the Sponsor button at the top of the page.
 
 
 <p align="center">
@@ -60,10 +58,10 @@ Since people have been asking, I accept donations but please remember that I wor
 ## Rinkhals installation
 
 > [!WARNING]
-> **Make sure you're confident tweaking your printer and you understand what you're doing. I'm not responsible if you brick your printer (even if there's some [documentation](https://rinkhals-community.github.io/Rinkhals/printers/recover-boot-issues/)) about that)**
+> **Make sure you're confident tweaking your printer and you understand what you're doing. We're not responsible if you brick your printer (even if there's some [documentation](https://rinkhals-community.github.io/Rinkhals/printers/recover-boot-issues/)) about that)**
 
 > [!CAUTION]
-> Many users want to change their Klipper printer configuration (the printer.cfg file). I strongly advise not modifying the stock printer configuration. Rinkhals offers additional protection you don't have while modifying directly your printer configuration. **I won't offer any support** and **your printer might not work properly or not boot anymore**. Check the documentation for more information: [Printer configuration](https://rinkhals-community.github.io/Rinkhals/about/printer-configuration/)
+> Many users want to change their Klipper printer configuration (the printer.cfg file). We strongly advise against modifying the stock printer configuration. Rinkhals offers additional protection you don't have while modifying directly your printer configuration. **We won't offer any support** and **your printer might not work properly or not boot anymore**. Check the documentation for more information: [Printer configuration](https://rinkhals-community.github.io/Rinkhals/about/printer-configuration/)
 
 A [quick start guide](https://rinkhals-community.github.io/Rinkhals/guides/rinkhals-quick-start/) is available to get Rinkhals up and running on your printer.
 
@@ -129,7 +127,7 @@ Instructions on how to install or develop apps are on the other repo as well.
 ## Contributing
 
 > [!NOTE]
-> If you develop on Windows like me, don't forget to disable Git's autocrlf function, as this repo contains Linux scripts running on Linux machines.<br />
+> If you develop on Windows, don't forget to disable Git's autocrlf function, as this repo contains Linux scripts running on Linux machines.<br />
 > Run `git config core.autocrlf false` **BEFORE** cloning the repo
 
 More and more contributors help this project move faster. Thank you everyone!
@@ -144,6 +142,7 @@ Current maintainers:
 - **jbatonnet**
 - **martinbogo**
 - **antirad**
+- **basvd**
   
 Special thanks to those people for providing the base research and helping support for more printers:
 - **utkabobr** (https://github.com/utkabobr/DuckPro-Kobra3)
