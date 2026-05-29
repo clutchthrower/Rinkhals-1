@@ -35,16 +35,18 @@ if [ -f /userdata/app/gk/restart_k3c.sh ]; then
 fi
 
 # Play ok jingle to notify completion
-B=/sys/class/pwm/pwmchip0/pwm0
-echo 0 > $B/enable; echo 0 > $B/duty_cycle
-echo 2551000 > $B/period; echo 1020400 > $B/duty_cycle; echo 1 > $B/enable
-usleep 120000; echo 0 > $B/enable; usleep 40000
-echo 0 > $B/duty_cycle
-echo 1912000 > $B/period; echo 764800 > $B/duty_cycle; echo 1 > $B/enable
-usleep 120000; echo 0 > $B/enable; usleep 40000
-echo 0 > $B/duty_cycle
-echo 1517000 > $B/period; echo 606800 > $B/duty_cycle; echo 1 > $B/enable
-usleep 180000; echo 0 > $B/enable
+if [ ! -f /useremain/rinkhals/.mute-sounds ]; then
+    B=/sys/class/pwm/pwmchip0/pwm0
+    echo 0 > $B/enable; echo 0 > $B/duty_cycle
+    echo 2551000 > $B/period; echo 1020400 > $B/duty_cycle; echo 1 > $B/enable
+    usleep 120000; echo 0 > $B/enable; usleep 40000
+    echo 0 > $B/duty_cycle
+    echo 1912000 > $B/period; echo 764800 > $B/duty_cycle; echo 1 > $B/enable
+    usleep 120000; echo 0 > $B/enable; usleep 40000
+    echo 0 > $B/duty_cycle
+    echo 1517000 > $B/period; echo 606800 > $B/duty_cycle; echo 1 > $B/enable
+    usleep 180000; echo 0 > $B/enable
+fi
 
 sync 2> /dev/null
 reboot

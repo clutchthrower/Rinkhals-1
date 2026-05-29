@@ -447,12 +447,39 @@ class RinkhalsUiApp(BaseApp):
                 icon_back.add_event_cb(lambda e: self.show_screen(self.screen_main), lv.EVENT_CODE.CLICKED, None)
                 
                 title = lvr.title(title_bar)
-                title.set_text('Advanced settings')
+                title.set_text('Settings')
                 title.center()
 
                 panel_buttons = lvr.panel(self.screen_advanced, flex_flow=lv.FLEX_FLOW.COLUMN)
                 panel_buttons.set_size(lv.pct(100), lv.pct(100))
-                
+
+                MUTE_SOUNDS_FILE = '/useremain/rinkhals/.mute-sounds'
+
+                panel_sounds = lvr.panel(panel_buttons)
+                panel_sounds.set_width(lv.pct(100))
+                panel_sounds.set_style_pad_all(0, lv.STATE.DEFAULT)
+
+                label_sounds = lvr.button(panel_sounds)
+                label_sounds.set_width(lv.pct(100))
+                label_sounds.set_text('Sounds')
+                label_sounds.set_style_pad_left(lv.dpx(15), lv.STATE.DEFAULT)
+                label_sounds.set_style_pad_right(lv.dpx(4), lv.STATE.DEFAULT)
+                label_sounds.set_style_text_align(lv.TEXT_ALIGN.LEFT, lv.STATE.DEFAULT)
+
+                checkbox_sounds = lvr.checkbox(panel_sounds)
+                checkbox_sounds.align(lv.ALIGN.RIGHT_MID, -lv.dpx(5), 0)
+                checkbox_sounds.set_checked(not os.path.exists(MUTE_SOUNDS_FILE))
+
+                def toggle_sounds(e, checkbox=checkbox_sounds):
+                    if os.path.exists(MUTE_SOUNDS_FILE):
+                        os.remove(MUTE_SOUNDS_FILE)
+                    else:
+                        open(MUTE_SOUNDS_FILE, 'wb').close()
+                    checkbox.set_checked(not os.path.exists(MUTE_SOUNDS_FILE))
+
+                checkbox_sounds.add_event_cb(toggle_sounds, lv.EVENT_CODE.CLICKED, None)
+                label_sounds.add_event_cb(toggle_sounds, lv.EVENT_CODE.CLICKED, None)
+
                 button_reboot = lvr.button(panel_buttons)
                 button_reboot.set_width(lv.pct(100))
                 button_reboot.set_text('Reboot printer')
