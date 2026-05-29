@@ -122,7 +122,7 @@ Instructions on how to install or develop apps are on the other repo as well.
 
 ### App Store
 
-The Rinkhals Touch UI includes a built-in **App Store** that lets you browse, install and remove community apps without leaving the printer screen. Apps are sourced directly from [jbatonnet/Rinkhals.Apps](https://github.com/jbatonnet/Rinkhals.Apps) on GitHub.
+The Rinkhals Touch UI includes a built-in **App Store** that lets you browse, install and remove community apps without leaving the printer screen. Apps are sourced directly from [rinkhals-community/Rinkhals.Apps](https://github.com/rinkhals-community/Rinkhals.Apps) on GitHub.
 
 <p align="center">
     <img width="192" src="./docs/docs/assets/rinkhals-ui/ui-app-store.png">
