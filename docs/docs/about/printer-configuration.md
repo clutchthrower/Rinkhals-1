@@ -11,7 +11,7 @@ Many users want to change their Klipper printer configuration (the `printer.cfg`
 Please note that Anycubic and thus Rinkhals use GoKlipper, a Go reimplementation of Klipper that does not support the same level of tweaking that you would be able to do with vanilla Klipper.
 If you modify the printer.cfg, your printer might not boot properly or show error 11407 (meaning GoKlipper could not start, usually because of a broken configuration).
 
-Before starting, here is a link to known stock printer configurations: [https://github.com/jbatonnet/Rinkhals/tree/master/files/3-rinkhals/home/rinkhals/printer_data/config](https://github.com/jbatonnet/Rinkhals/tree/master/files/3-rinkhals/home/rinkhals/printer_data/config)
+Before starting, here is a link to known stock printer configurations: [https://github.com/rinkhals-community/Rinkhals/tree/master/files/3-rinkhals/home/rinkhals/printer_data/config](https://github.com/rinkhals-community/Rinkhals/tree/master/files/3-rinkhals/home/rinkhals/printer_data/config)
 
 And here is a link to stock firmwares you can flash to restore your printer:
 
@@ -61,7 +61,7 @@ Now here are some additional tools I built in Rinkhals to help those situations:
 - Rinkhals tries to detect if GoKlipper is stuck or crashes. In those cases it will disable itself.
 - If Rinkhals is disabled, you can place a `.enable-rinkhals` file at the root of a USB drive, and reboot. It will force Rinkhals to try to start again, but it might crash and disable itself again.
 - You can have a `printer.custom.cfg` at the root of a USB drive. During startup, Rinkhals will copy and override the user customizations with the ones provided.
-- I provide multiple SWU tools to get SSH, restore the config and more: [https://github.com/jbatonnet/Rinkhals/actions/workflows/build-swu-tools.yml](https://github.com/jbatonnet/Rinkhals/actions/workflows/build-swu-tools.yml)
+- I provide multiple SWU tools to get SSH, restore the config and more: [https://github.com/rinkhals-community/Rinkhals/actions/workflows/build-swu-tools.yml](https://github.com/rinkhals-community/Rinkhals/actions/workflows/build-swu-tools.yml)
 
 So with all that you're left with some solutions:
 

@@ -2,7 +2,7 @@
 title: Monitoring app
 ---
 
-Versions of Rinkhals after commit [971d8a5](https://github.com/jbatonnet/Rinkhals/commit/971d8a552a0e31a02281d8585401128b399fa7b7) include an apps system and the Rinkhals monitor tool.
+Versions of Rinkhals after commit [971d8a5](https://github.com/rinkhals-community/Rinkhals/commit/971d8a552a0e31a02281d8585401128b399fa7b7) include an apps system and the Rinkhals monitor tool.
 
 This tool allows to collect system metrics and expose them in a MQTT server. The data is preformatted to be discovered and used with Home Assistant but might be used by anything reading MQTT messages.
 
@@ -18,7 +18,7 @@ Here is an example Node-RED script to perform this replication:
 ```
 
 You can also configure the Rinkhals monitor to output the metrics to any MQTT server you want.
-Create a `.env` file with the following environment variables:
+Create a `.env` file at `/useremain/home/rinkhals/apps/rinkhals-monitor/.env` with the following environment variables:
 
 ```
 MQTT_IP=x.x.x.x

@@ -1,8 +1,8 @@
 site_name: Rinkhals Documentation
-site_url: https://jbatonnet.github.io/Rinkhals/
+site_url: https://rinkhals-community.github.io/Rinkhals/
 
-repo_url: https://github.com/jbatonnet/Rinkhals
-repo_name: jbatonnet/Rinkhals
+repo_url: https://github.com/rinkhals-community/Rinkhals
+repo_name: rinkhals-community/Rinkhals
 edit_uri: edit/master/docs/docs/
 
 copyright: MIT License
@@ -53,7 +53,7 @@ theme:
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/jbatonnet/Rinkhals
+      link: https://github.com/rinkhals-community/Rinkhals
 
 plugins:
   - search

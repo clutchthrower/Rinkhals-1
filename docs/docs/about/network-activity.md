@@ -54,17 +54,19 @@ DNS uses 1.1.1.1 (Cloudflare DNS) and 8.8.8.8 (Google DNS) using standard port 5
 
 ### Apps
 
-- [Cloud2LAN bridge](https://github.com/jbatonnet/Rinkhals.apps/tree/master/apps/cloud2lan-bridge)
+- [Hostname and DNS](https://github.com/rinkhals-community/Rinkhals/tree/master/files/4-apps/home/rinkhals/apps/10-hostname-dns)
+    - Advertises the printer's hostname locally via DHCP/DNS.
+- [Cloud2LAN bridge](https://github.com/rinkhals-community/Rinkhals.apps/tree/master/apps/cloud2lan-bridge)
     - MQTT servers listed above to simulate cloud features
-- [Discovery helper](https://github.com/jbatonnet/Rinkhals.apps/tree/master/apps/discovery-helper)
+- [Discovery helper](https://github.com/rinkhals-community/Rinkhals.apps/tree/master/apps/discovery-helper)
     - Local IGMP / SSDP
-- [Moonraker](https://github.com/jbatonnet/Rinkhals/tree/master/files/4-apps/home/rinkhals/apps/40-moonraker)
+- [Moonraker](https://github.com/rinkhals-community/Rinkhals/tree/master/files/4-apps/home/rinkhals/apps/40-moonraker)
     - Update manager
 
 And other apps for their respective services:
 
-- [Cloudflare Tunnel](https://github.com/jbatonnet/Rinkhals.apps/tree/master/apps/cloudflare-tunnel)
-- [OctoApp](https://github.com/jbatonnet/Rinkhals.apps/tree/master/apps/octoapp)
-- [OctoEverywhere](https://github.com/jbatonnet/Rinkhals.apps/tree/master/apps/octoeverywhere)
-- [Remote Debugging](https://github.com/jbatonnet/Rinkhals.apps/tree/master/apps/remote-debugging) (ngrok)
-- [Tailscale](https://github.com/jbatonnet/Rinkhals.apps/tree/master/apps/tailscale)
+- [Cloudflare Tunnel](https://github.com/rinkhals-community/Rinkhals.apps/tree/master/apps/cloudflare-tunnel)
+- [OctoApp](https://github.com/rinkhals-community/Rinkhals.apps/tree/master/apps/octoapp)
+- [OctoEverywhere](https://github.com/rinkhals-community/Rinkhals.apps/tree/master/apps/octoeverywhere)
+- [Remote Debugging](https://github.com/rinkhals-community/Rinkhals.apps/tree/master/apps/remote-debugging) (ngrok)
+- [Tailscale](https://github.com/rinkhals-community/Rinkhals.apps/tree/master/apps/tailscale)

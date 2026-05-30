@@ -17,7 +17,7 @@ The installer allows you to:
 
 ## Download and use the Rinkhals Installer
 
-From the GitHub [Releases](https://github.com/jbatonnet/Rinkhals/releases) page, find the version you want and download the installer.swu matching your printer model.
+From the GitHub [Releases](https://github.com/rinkhals-community/Rinkhals/releases) page, find the version you want and download the installer.swu matching your printer model.
 As detailed in the [installation](./installation-and-firmware-updates.md) page, copy the .swu file as update.swu on a FAT32 USB drive. Then plug into the printer.
 
 The installer takes about 10s to start. Once started, a SSH server will be listening on port 2222.

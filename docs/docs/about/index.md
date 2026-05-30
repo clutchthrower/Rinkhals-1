@@ -75,7 +75,7 @@ System apps are normal Rinkhals apps that are bundled in every Rinkhals release.
 
 Moonraker is an API gateway for Klipper. It exposes Klipper information and interactions to 3rd party clients using web API and websockets.
 
-Rinkhals is using [vanilla Moonraker](https://github.com/Arksine/moonraker) plus [a special Kobra component](https://github.com/jbatonnet/Rinkhals/blob/master/files/4-apps/home/rinkhals/apps/40-moonraker/kobra.py). This component is used to modify vanilla Moonraker behavior and adapt it to GoKlipper.
+Rinkhals is using [vanilla Moonraker](https://github.com/Arksine/moonraker) plus [a special Kobra component](https://github.com/rinkhals-community/Rinkhals/blob/master/files/4-apps/home/rinkhals/apps/40-moonraker/kobra.py). This component is used to modify vanilla Moonraker behavior and adapt it to GoKlipper.
 
 When using GoKlipper and LAN mode, this component will intercept Print calls from Mainsail, Fluid, Orca and more and replace it with a proprietary Anycubic call. This call allows a few settings to be changed, such as Bed leveling on print start, flow calibration and resonance testing.
 By default, those settings are all disabled for every print. This behavior can be changed using [app configuration](apps/configuration.md).
@@ -86,7 +86,7 @@ By default, those settings are all disabled for every print. This behavior can b
 
 | 40-moonraker | |
 |-|-|
-| App manifest | [app.json](https://github.com/jbatonnet/Rinkhals/blob/master/files/4-apps/home/rinkhals/apps/40-moonraker/app.json) |
+| App manifest | [app.json](https://github.com/rinkhals-community/Rinkhals/blob/master/files/4-apps/home/rinkhals/apps/40-moonraker/app.json) |
 | Default state | Enabled |
 | Port | 7125 |
 | CPU usage | 10% ~ 20% |
@@ -113,7 +113,7 @@ Lighttpd is also configured to expose up to 4 cameras proxying to mjpg-streamer.
 
 | 25-mainsail | |
 |-|-|
-| App manifest | [app.json](https://github.com/jbatonnet/Rinkhals/blob/master/files/4-apps/home/rinkhals/apps/25-mainsail/app.json) |
+| App manifest | [app.json](https://github.com/rinkhals-community/Rinkhals/blob/master/files/4-apps/home/rinkhals/apps/25-mainsail/app.json) |
 | Default state | Enabled |
 | Port | 4409, 80* |
 | CPU usage | 0 ~ 3 % |
@@ -128,7 +128,7 @@ Please refer to Mainsail documentation above as the behavior is exactly the same
 
 | 26-fluidd | |
 |-|-|
-| App manifest | [app.json](https://github.com/jbatonnet/Rinkhals/blob/master/files/4-apps/home/rinkhals/apps/26-fluidd/app.json) |
+| App manifest | [app.json](https://github.com/rinkhals-community/Rinkhals/blob/master/files/4-apps/home/rinkhals/apps/26-fluidd/app.json) |
 | Default state | Enabled |
 | Port | 4409, 80* |
 | CPU usage | 0 ~ 3 % |
@@ -145,7 +145,7 @@ By default, a low compatible resolution of 640x480 is used. Resolution can be ch
 
 | 30-mjpg-streamer | |
 |-|-|
-| App manifest | [app.json](https://github.com/jbatonnet/Rinkhals/blob/master/files/4-apps/home/rinkhals/apps/30-mjpg-streamer/app.json) |
+| App manifest | [app.json](https://github.com/rinkhals-community/Rinkhals/blob/master/files/4-apps/home/rinkhals/apps/30-mjpg-streamer/app.json) |
 | Default state | Enabled |
 | Port | 8080, 8081*, 8082*, 8083* |
 | CPU usage | ? |
@@ -160,7 +160,7 @@ When enabled and started, you can connect your VNC client to port 5900 or access
 
 | 50-remote-display | |
 |-|-|
-| App manifest | [app.json](https://github.com/jbatonnet/Rinkhals/blob/master/files/4-apps/home/rinkhals/apps/50-remote-display/app.json) |
+| App manifest | [app.json](https://github.com/rinkhals-community/Rinkhals/blob/master/files/4-apps/home/rinkhals/apps/50-remote-display/app.json) |
 | Default state | Disabled |
 | Port | 5800, 5900 |
 | CPU usage | 1% when idle, 15 ~ 25 % with active connections |
@@ -177,7 +177,7 @@ Metrics are be collected and sent every 30s. High level system metrics are also 
 
 | rinkhals-monitor | |
 |-|-|
-| App manifest | [app.json](https://github.com/jbatonnet/Rinkhals/blob/master/files/4-apps/home/rinkhals/apps/rinkhals-monitor/app.json) |
+| App manifest | [app.json](https://github.com/rinkhals-community/Rinkhals/blob/master/files/4-apps/home/rinkhals/apps/rinkhals-monitor/app.json) |
 | Default state | Disabled |
 | CPU usage | 0 ~ ? |
 | Memory usage | 6 MB |

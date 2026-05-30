@@ -28,5 +28,5 @@ Depending on the app, you might need to restart it, either using the UI or:
 
 Properties are defined by every app in their app.json manifest:
 
-- mjpg-streamer: [https://github.com/jbatonnet/Rinkhals/blob/master/files/4-apps/home/rinkhals/apps/30-mjpg-streamer/app.json](https://github.com/jbatonnet/Rinkhals/blob/master/files/4-apps/home/rinkhals/apps/30-mjpg-streamer/app.json)
-- moonraker: [https://github.com/jbatonnet/Rinkhals/blob/master/files/4-apps/home/rinkhals/apps/40-moonraker/app.json](https://github.com/jbatonnet/Rinkhals/blob/master/files/4-apps/home/rinkhals/apps/40-moonraker/app.json)
+- mjpg-streamer: [https://github.com/rinkhals-community/Rinkhals/blob/master/files/4-apps/home/rinkhals/apps/30-mjpg-streamer/app.json](https://github.com/rinkhals-community/Rinkhals/blob/master/files/4-apps/home/rinkhals/apps/30-mjpg-streamer/app.json)
+- moonraker: [https://github.com/rinkhals-community/Rinkhals/blob/master/files/4-apps/home/rinkhals/apps/40-moonraker/app.json](https://github.com/rinkhals-community/Rinkhals/blob/master/files/4-apps/home/rinkhals/apps/40-moonraker/app.json)

@@ -11,15 +11,23 @@ GoKlipper (1) is not starting properly, it's most likely due to a printer config
 
 1. GoKlipper is Anycubic's reimplementation of Klipper in Go
 
-Please check the information in [I got 11407 or my printer doesn't boot anymore](Rinkhals/printer-configuration.md#i-got-11407-or-my-printer-doesnt-boot-anymore)
+Please check the information in [I got 11407 or my printer doesn't boot anymore](about/printer-configuration.md#i-got-11407-or-my-printer-doesnt-boot-anymore)
+
+## I'm getting "Timer too close" errors during prints
+This is often caused by MCU starvation when GoKlipper receives too many small, high-resolution G-Code segments combined with rapid Dynamic Cooling fan adjustments (frequent `M106` / `M160` commands). 
+
+If you are using **Anycubic Slicer Next** or **Orca Slicer**:
+1. Increase your **Max Deviation** settings (under Print settings > Precision) to reduce the G-Code fragment density.
+2. Consider disabling **Dynamic overhang cooling** or reducing the frequency of fan speed changes, as the constant back-and-forth commands can overwhelm the host proxy.
+*(Note: As of Rinkhals 20260501_01, core priority processes have been optimized to better mitigate this, but slicer adjustments remain the best practice.)*
 
 ## Should I use installer-\*.swu or update-\*.swu?
 
-The installer-\*.swu is the Rinkhals Installer tool. It's like a web installer on steroids. Using this tool you can download any Rinkhals or system firmware and perform some other operations. Check more details on the [Installer page](Rinkhals/rinkhals-installer.md)
+The installer-\*.swu is the Rinkhals Installer tool. It's like a web installer on steroids. Using this tool you can download any Rinkhals or system firmware and perform some other operations. Check more details on the [Installer page](about/rinkhals-installer.md)
 
 The update-\*.swu is the full Rinkhals package. There's no installation screen here, it will just install the downloaded Rinkhals version on your printer. Useful for offline installations for example.
 
-Either way, select the right SWU for your printer, download it and install it as described in the [installation page](Rinkhals/installation-and-firmware-updates.md).
+Either way, select the right SWU for your printer, download it and install it as described in the [installation page](about/installation-and-firmware-updates.md).
 
 ## How can I print multicolor / with the ACE from Orca Slicer?
 Filament mapping is stored in the gcode and depends on your slicer configuration.
@@ -42,7 +50,7 @@ You have to disable and stop the app to make the camera work in Anycubic apps.
 ## Can I use OctoApp with Rinkhals?
 Yes, Rinkhals supports OctoApp out of the box. To work properly, OctoApp needs the Moonraker app and one of Mainsail and Fluidd app to be enabled.
 
-You don’t need the octoapp companion from this repo: [Rinkhals.apps](https://github.com/jbatonnet/Rinkhals.apps/) for OctoApp to work. This companion app will allow you to get live notifications if this is something you want.
+You don’t need the octoapp companion from this repo: [Rinkhals.apps](https://github.com/rinkhals-community/Rinkhals.apps/) for OctoApp to work. This companion app will allow you to get live notifications if this is something you want.
 
 ## I cannot see my camera in OctoApp / Mainsail / Fluidd
 
@@ -57,7 +65,7 @@ The code modifications are already in Rinkhals.
 If Rinkhals is running on your printer, you can already connect to port 22 on your printer.
 
 If you’re running stock firmware or any other, you’ll need to use the SSH SWU tool. This tool will start a SSH server on port 2222 on any firmware at any time.
-1. Go to the releases page: [https://github.com/jbatonnet/Rinkhals/releases](https://github.com/jbatonnet/Rinkhals/releases)
+1. Go to the releases page: [https://github.com/rinkhals-community/Rinkhals/releases](https://github.com/rinkhals-community/Rinkhals/releases)
 2. Download the right SWU tools for your printer (tools-xxx.zip)
 3. Extract and get the SSH tool you want
 4. Copy the tool as `update.swu` on a FAT32 USB drive in a `aGVscF9zb3Nf` directory (same as during Rinkhals installation)

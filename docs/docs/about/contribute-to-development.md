@@ -25,7 +25,7 @@ It's not only about pure dev, but about putting scripts and configuration togeth
 There are many different approaches to firmware dev, you could rebuild everything and flash your own images like you would download an .img for a Raspberry Pi for example.
 For Rinkhals I decided to create an overlay because it's way safer, easier to build and it allows me to rely on existing software from Anycubic.
 
-So have a look at [https://github.com/jbatonnet/Rinkhals/blob/master/files/3-rinkhals/start.sh](https://github.com/jbatonnet/Rinkhals/blob/master/files/3-rinkhals/start.sh), it uses mount heavily to "hide" the stock filesystem and overlay my own to add binaries, scripts and all.
+So have a look at [https://github.com/rinkhals-community/Rinkhals/blob/master/files/3-rinkhals/start.sh](https://github.com/rinkhals-community/Rinkhals/blob/master/files/3-rinkhals/start.sh), it uses mount heavily to "hide" the stock filesystem and overlay my own to add binaries, scripts and all.
 
 I really think those printers are super interesting to dev on, be curious about how things are starting, why you hear a beep when you plug a USB drive in. For example for startup follow `/etc/init.d/rkS`, after many scripts it will lead you to understand how Rinkhals starts.
 Look at the stock firmware images as well, it's interesting to see how they built that, and you will realize it's far from perfect!
