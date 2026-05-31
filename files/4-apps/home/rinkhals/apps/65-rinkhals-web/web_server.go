@@ -402,6 +402,8 @@ func startWebServer() {
 	mux.HandleFunc("/api/logstream", handleLogStream)
 	mux.HandleFunc("/api/auth/status", handleAuthStatus)
 	mux.HandleFunc("/api/auth/change", handleAuthChange)
+	mux.HandleFunc("/api/apps", handleAppsList)
+	mux.HandleFunc("/api/apps/", handleApp)
 
 	mux.Handle("/", http.FileServer(http.FS(uiFS)))
 

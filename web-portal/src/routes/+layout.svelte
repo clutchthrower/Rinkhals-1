@@ -2,7 +2,7 @@
 	import { onMount } from "svelte";
 	import { page } from "$app/stores";
 	import "../app.css";
-	import { LayoutDashboard, FolderOpen, Terminal, Settings, FileText, ScrollText, ShieldAlert, Sun, Moon, Monitor } from "lucide-svelte";
+	import { LayoutDashboard, FolderOpen, Terminal, Settings, FileText, ScrollText, ShieldAlert, Sun, Moon, Monitor, Boxes } from "lucide-svelte";
 	import { themePreference, resolvedTheme, cycleTheme, type ThemePreference } from "$lib/theme";
 	let { children } = $props();
 
@@ -20,6 +20,7 @@
 
 	const nav = [
 		{ href: "/", label: "Dashboard", icon: LayoutDashboard },
+		{ href: "/apps", label: "Apps", icon: Boxes },
 		{ href: "/files", label: "File Browser", icon: FolderOpen },
 		{ href: "/logs", label: "System Logs", icon: ScrollText },
 		{ href: "/terminal", label: "Terminal", icon: Terminal },
