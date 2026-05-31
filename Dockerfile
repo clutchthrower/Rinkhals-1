@@ -95,22 +95,22 @@ RUN --mount=type=cache,sharing=locked,target=/var/cache/apt \
     rm -rf /var/lib/apt/lists/*
 
 ###############################################################
-# build-monitor-ui builds the Svelte UI
-FROM node:22-bookworm AS build-monitor-ui
+# build-web-ui builds the Svelte UI
+FROM node:22-bookworm AS build-web-ui
 COPY ./web-portal /web-portal
 WORKDIR /web-portal
 RUN npm ci
 RUN npm run build
 
 ###############################################################
-# build-monitor-backend builds the Go backend
-FROM golang:1.24-alpine AS build-monitor-backend
-COPY ./files/4-apps/home/rinkhals/apps/65-rinkhals-monitor /app
-COPY --from=build-monitor-ui /web-portal/build /app/ui
+# build-web-backend builds the Go backend
+FROM golang:1.24-alpine AS build-web-backend
+COPY ./files/4-apps/home/rinkhals/apps/65-rinkhals-web /app
+COPY --from=build-web-ui /web-portal/build /app/ui
 WORKDIR /app
 RUN apk update && apk add upx
-RUN GOOS=linux GOARCH=arm go build -ldflags="-s -w" -trimpath -v -o rinkhals-monitor
-RUN upx --lzma rinkhals-monitor || true
+RUN GOOS=linux GOARCH=arm go build -ldflags="-s -w" -trimpath -v -o rinkhals-web
+RUN upx --lzma rinkhals-web || true
 
 ###############################################################
 # app-mainsail prepares Mainsail app files
@@ -210,17 +210,17 @@ COPY ./files/4-apps /bundle/rinkhals/
 COPY ./files/*.* /bundle/
 COPY ./build/prepare-bundle.sh /build/
 
-# Clean up rinkhals-monitor sources from the merged bundle and inject the
+# Clean up rinkhals-web sources from the merged bundle and inject the
 # built Svelte UI + Go backend in their place. Must run before prepare-bundle.sh
 # so the rename/patches passes see the final artifacts.
-RUN rm -rf /bundle/rinkhals/home/rinkhals/apps/65-rinkhals-monitor/ui/* \
-    && rm -f /bundle/rinkhals/home/rinkhals/apps/65-rinkhals-monitor/*.go \
-    && rm -f /bundle/rinkhals/home/rinkhals/apps/65-rinkhals-monitor/go.* \
-    && rm -f /bundle/rinkhals/home/rinkhals/apps/65-rinkhals-monitor/update-layout.js \
-    && rm -f /bundle/rinkhals/home/rinkhals/apps/65-rinkhals-monitor/rinkhals-monitor
-COPY --from=build-monitor-ui /web-portal/build/ /bundle/rinkhals/home/rinkhals/apps/65-rinkhals-monitor/ui/
-COPY --from=build-monitor-backend /app/rinkhals-monitor /bundle/rinkhals/home/rinkhals/apps/65-rinkhals-monitor/rinkhals-monitor
-RUN chmod +x /bundle/rinkhals/home/rinkhals/apps/65-rinkhals-monitor/rinkhals-monitor
+RUN rm -rf /bundle/rinkhals/home/rinkhals/apps/65-rinkhals-web/ui/* \
+    && rm -f /bundle/rinkhals/home/rinkhals/apps/65-rinkhals-web/*.go \
+    && rm -f /bundle/rinkhals/home/rinkhals/apps/65-rinkhals-web/go.* \
+    && rm -f /bundle/rinkhals/home/rinkhals/apps/65-rinkhals-web/update-layout.js \
+    && rm -f /bundle/rinkhals/home/rinkhals/apps/65-rinkhals-web/rinkhals-web
+COPY --from=build-web-ui /web-portal/build/ /bundle/rinkhals/home/rinkhals/apps/65-rinkhals-web/ui/
+COPY --from=build-web-backend /app/rinkhals-web /bundle/rinkhals/home/rinkhals/apps/65-rinkhals-web/rinkhals-web
+RUN chmod +x /bundle/rinkhals/home/rinkhals/apps/65-rinkhals-web/rinkhals-web
 ARG version="dev"
 RUN /build/prepare-bundle.sh /bundle "$version"
 

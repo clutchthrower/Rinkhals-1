@@ -1,4 +1,4 @@
-// docker run --rm -it -v .\files:/files -w /files/4-apps/home/rinkhals/apps/rinkhals-monitor --entrypoint=/bin/sh golang:1.23.4 -c "GOOS=linux GOARCH=arm go build -v"
+// docker run --rm -it -v .\files:/files -w /files/4-apps/home/rinkhals/apps/65-rinkhals-web --entrypoint=/bin/sh golang:1.23.4 -c "GOOS=linux GOARCH=arm go build -v"
 
 package main
 
@@ -29,7 +29,7 @@ var processCommands = map[string]string{
 	"Moonraker":        "moonraker.py",
 	"Rinkhals UI":      "rinkhals-ui.py",
 	"mjpg-streamer":    "mjpg_streamer",
-	"Rinkhals monitor": "rinkhals-monitor",
+	"Rinkhals web": "rinkhals-web",
 	"lighttp":          "lighttpd",
 	"OctoApp":          "octoapp",
 	"OctoEverywhere":   "octoeverywhere",
@@ -37,7 +37,7 @@ var processCommands = map[string]string{
 var processCache = map[string]*process.Process{}
 
 func getProcessID(processName string) (int, error) {
-	if processName == "rinkhals-monitor" {
+	if processName == "rinkhals-web" {
 		return os.Getpid(), nil
 	}
 	if runtime.GOOS != "linux" {
@@ -102,7 +102,7 @@ func main() {
 	go startWebServer()
 
 	// Load environment variables from .env file
-	err := godotenv.Load(".env", "/useremain/home/rinkhals/apps/rinkhals-monitor/.env")
+	err := godotenv.Load(".env", "/useremain/home/rinkhals/apps/65-rinkhals-web/.env")
 	if err == nil {
 		log.Println("Loading environment from .env file")
 	}
@@ -217,7 +217,7 @@ func main() {
 			"serial_number": "`, deviceID, `"
 		},
 		"origin": {
-			"name": "rinkhals-monitor"
+			"name": "rinkhals-web"
 		},
 		"components": {
 			"memory_usage": {

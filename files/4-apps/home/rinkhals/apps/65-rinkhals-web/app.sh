@@ -3,7 +3,7 @@
 APP_ROOT=$(dirname $(realpath $0))
 
 status() {
-    PID=$(cat /tmp/rinkhals/monitor.pid 2> /dev/null)
+    PID=$(cat /tmp/rinkhals/web.pid 2> /dev/null)
     if [ "$PID" == "" ]; then
         report_status $APP_STATUS_STOPPED
         return
@@ -23,18 +23,18 @@ start() {
 
     mkdir -p /tmp/rinkhals
 
-    chmod +x ./rinkhals-monitor
-    env GOMEMLIMIT=10MiB GOGC=20 GODEBUG=madvdontneed=1 ./rinkhals-monitor > /dev/null 2>&1 &
+    chmod +x ./rinkhals-web
+    env GOMEMLIMIT=10MiB GOGC=20 GODEBUG=madvdontneed=1 ./rinkhals-web > /dev/null 2>&1 &
     PID=$!
     if [ "$?" == 0 ]; then
-        echo $PID > /tmp/rinkhals/monitor.pid
+        echo $PID > /tmp/rinkhals/web.pid
     fi
 }
 stop() {
-    PID=$(cat /tmp/rinkhals/monitor.pid 2> /dev/null)
+    PID=$(cat /tmp/rinkhals/web.pid 2> /dev/null)
     kill_by_id $PID
-    rm /tmp/rinkhals/monitor.pid 2> /dev/null
-    kill_by_name rinkhals-monitor
+    rm /tmp/rinkhals/web.pid 2> /dev/null
+    kill_by_name rinkhals-web
 }
 
 case "$1" in

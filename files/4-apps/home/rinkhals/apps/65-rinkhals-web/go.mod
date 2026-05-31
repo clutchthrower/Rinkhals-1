@@ -1,4 +1,4 @@
-module thedju.net/rinkhals-monitor
+module thedju.net/rinkhals-web
 
 go 1.24.0
 
