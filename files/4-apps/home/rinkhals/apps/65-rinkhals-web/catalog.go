@@ -27,7 +27,10 @@ const (
 	catalogRawBase        = "https://raw.githubusercontent.com/rinkhals-community/Rinkhals.Apps"
 	catalogCacheTTL       = 10 * time.Minute
 	catalogHTTPTimeout    = 15 * time.Second
-	catalogDownloadTmp    = "/tmp/rinkhals-catalog"
+	// Download to persistent eMMC, not /tmp: /tmp is tmpfs (RAM) and a large app
+	// SWU would be held in memory while install_swu also extracts into /useremain,
+	// risking OOM on memory-constrained printers.
+	catalogDownloadTmp    = "/useremain/rinkhals-catalog"
 	catalogUserAgent      = "rinkhals-web"
 )
 
