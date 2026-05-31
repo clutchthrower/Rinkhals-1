@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { onMount } from "svelte";
+	import { page } from "$app/stores";
 	import "../app.css";
-	import { LayoutDashboard, FolderOpen, Terminal, Settings, FileText, ScrollText } from "lucide-svelte";
+	import { LayoutDashboard, FolderOpen, Terminal, Settings, FileText, ScrollText, ShieldAlert } from "lucide-svelte";
 	let { children } = $props();
 
 	let showPasswordModal = $state(false);
@@ -9,6 +10,15 @@
 	let newPassword = $state("");
 	let confirmPassword = $state("");
 	let errorMsg = $state("");
+
+	const nav = [
+		{ href: "/", label: "Dashboard", icon: LayoutDashboard },
+		{ href: "/files", label: "File Browser", icon: FolderOpen },
+		{ href: "/logs", label: "System Logs", icon: ScrollText },
+		{ href: "/terminal", label: "Terminal", icon: Terminal },
+		{ href: "/editor", label: "Text Editor", icon: FileText },
+		{ href: "/management", label: "Manage Rinkhals", icon: Settings }
+	];
 
 	onMount(async () => {
 		try {
@@ -55,38 +65,46 @@
 	}
 </script>
 
-<div class="flex h-screen bg-gray-900 text-gray-100 font-sans">
-	<aside class="w-64 bg-gray-950 border-r border-gray-800 flex flex-col">
-		<div class="h-20 flex items-center px-4 border-b border-gray-800 space-x-3">
-			<div class="w-12 h-12 rounded-lg bg-gray-900 border border-gray-800 flex items-center justify-center overflow-hidden shrink-0 shadow-inner">
-				<img src="/assets/logo.png" alt="Rinkhals Logo" class="w-10 h-10 object-contain drop-shadow-md" />
+<div class="flex h-screen bg-canvas text-ink font-sans">
+	<aside class="w-64 bg-surface border-r border-line-soft flex flex-col">
+		<div class="h-20 flex items-center px-5 border-b border-line-soft gap-3">
+			<div class="w-11 h-11 rounded-xl bg-canvas border border-line-soft flex items-center justify-center overflow-hidden shrink-0">
+				<img src="/assets/logo.png" alt="Rinkhals Logo" class="w-9 h-9 object-contain" />
 			</div>
-			<h1 class="text-xl font-bold bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">Rinkhals</h1>
+			<div class="leading-tight">
+				<h1 class="text-lg font-semibold text-ink tracking-tight">Rinkhals</h1>
+				<p class="text-[11px] uppercase tracking-wider text-ink-faint">Printer Console</p>
+			</div>
 		</div>
 
-		<nav class="flex-1 py-6 px-4 space-y-2">
-			<a href="/" class="flex items-center space-x-3 px-4 py-3 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors">
-				<LayoutDashboard size={20} />
-				<span class="font-medium">Dashboard</span>
-			</a>			<a href="/files" class="flex items-center space-x-3 px-4 py-3 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors">
-				<FolderOpen size={20} />
-				<span class="font-medium">File Browser</span>
-			</a>			<a href="/logs" class="flex items-center space-x-3 px-4 py-3 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors">
-				<ScrollText size={20} />
-				<span class="font-medium">System Logs</span>
-			</a>
-			<a href="/terminal" class="flex items-center space-x-3 px-4 py-3 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors"><Terminal size={20} /><span class="font-medium">Terminal</span></a>
-			<a href="/editor" class="flex items-center space-x-3 px-4 py-3 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors">
-				<FileText size={20} />
-				<span class="font-medium">Text Editor</span>
-			</a>
-                        <a href="/management" class="flex items-center space-x-3 px-4 py-3 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors"><Settings size={20} /><span class="font-medium">Manage Rinkhals</span></a>
-
+		<nav class="flex-1 py-5 px-3 space-y-1">
+			{#each nav as item}
+				{@const Icon = item.icon}
+				{@const active = $page.url.pathname === item.href || (item.href !== "/" && $page.url.pathname.startsWith(item.href))}
+				<a
+					href={item.href}
+					class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-sm font-medium
+						{active
+							? 'bg-brand-soft text-brand'
+							: 'text-ink-muted hover:bg-surface-warm hover:text-ink'}"
+				>
+					<Icon size={18} class={active ? "text-brand" : "text-ink-faint"} />
+					<span>{item.label}</span>
+					{#if active}
+						<span class="ml-auto w-1.5 h-1.5 rounded-full bg-accent"></span>
+					{/if}
+				</a>
+			{/each}
 		</nav>
+
+		<div class="px-4 py-4 border-t border-line-soft text-[11px] text-ink-faint">
+			<span class="inline-block w-1.5 h-1.5 rounded-full bg-accent align-middle mr-2"></span>
+			Rinkhals Web &middot; dev preview
+		</div>
 	</aside>
 
 	<main class="flex-1 flex flex-col h-screen overflow-hidden">
-		<div class="flex-1 overflow-auto bg-gray-900 p-8">
+		<div class="flex-1 overflow-auto bg-canvas p-8">
 			{@render children()}
 		</div>
 	</main>
@@ -95,37 +113,37 @@
 {#if showPasswordModal}
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-	<div class="bg-gray-900 border border-red-500/50 rounded-xl max-w-md w-full p-6 shadow-2xl relative" onclick={(e) => e.stopPropagation()}>
-		<div class="absolute -top-3 -right-3 bg-red-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg">Action Required</div>
-		<h2 class="text-2xl font-bold text-white mb-2 flex items-center gap-2">
-			<Settings class="text-red-400" size={24} /> Security Warning
+<div class="fixed inset-0 bg-ink/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+	<div class="bg-canvas border border-line rounded-2xl max-w-md w-full p-6 shadow-2xl relative" onclick={(e) => e.stopPropagation()}>
+		<div class="absolute -top-3 -right-3 bg-coral text-white text-xs font-semibold px-3 py-1 rounded-full shadow">Action Required</div>
+		<h2 class="text-xl font-semibold text-ink mb-2 flex items-center gap-2">
+			<ShieldAlert class="text-coral" size={22} /> Security warning
 		</h2>
-		<p class="text-gray-300 text-sm mb-6 pb-4 border-b border-gray-800">
-			Your Rinkhals Monitor is currently using the default factory credentials (<strong>admin</strong>/<strong>rinkhals</strong>). It is highly insecure to leave this exposed, especially since Rinkhals hosts a raw terminal. Please set a new password.
+		<p class="text-ink-2 text-sm mb-5 pb-4 border-b border-line-soft">
+			Rinkhals Web is using the default credentials (<strong>admin</strong>/<strong>rinkhals</strong>). Because this app exposes a raw terminal, please set a new password before going further.
 		</p>
-		
+
 		<form class="space-y-4" onsubmit={(e) => { e.preventDefault(); changePassword(); }}>
 			<div>
-				<label class="block text-sm font-medium text-gray-400 mb-1" for="user">Username</label>
-				<input id="user" type="text" bind:value={newUsername} class="w-full bg-gray-800 border-gray-700 text-white rounded focus:ring-emerald-500 focus:border-emerald-500" required />
+				<label class="block text-xs font-medium text-ink-muted mb-1" for="user">Username</label>
+				<input id="user" type="text" bind:value={newUsername} class="w-full bg-canvas border border-line rounded-lg px-3 py-2 text-ink focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand" required />
 			</div>
 			<div>
-				<label class="block text-sm font-medium text-gray-400 mb-1" for="pass">New Password</label>
-				<input id="pass" type="password" bind:value={newPassword} class="w-full bg-gray-800 border-gray-700 text-white rounded focus:ring-emerald-500 focus:border-emerald-500" required />
+				<label class="block text-xs font-medium text-ink-muted mb-1" for="pass">New password</label>
+				<input id="pass" type="password" bind:value={newPassword} class="w-full bg-canvas border border-line rounded-lg px-3 py-2 text-ink focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand" required />
 			</div>
 			<div>
-				<label class="block text-sm font-medium text-gray-400 mb-1" for="pass2">Confirm Password</label>
-				<input id="pass2" type="password" bind:value={confirmPassword} class="w-full bg-gray-800 border-gray-700 text-white rounded focus:ring-emerald-500 focus:border-emerald-500" required />
+				<label class="block text-xs font-medium text-ink-muted mb-1" for="pass2">Confirm password</label>
+				<input id="pass2" type="password" bind:value={confirmPassword} class="w-full bg-canvas border border-line rounded-lg px-3 py-2 text-ink focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand" required />
 			</div>
-			
+
 			{#if errorMsg}
-				<p class="text-red-400 text-sm py-2">{errorMsg}</p>
+				<p class="text-coral text-sm">{errorMsg}</p>
 			{/if}
-			
-			<div class="pt-4 flex justify-end">
-				<button type="submit" class="px-5 py-2 flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-lg transition-colors shadow-lg shadow-emerald-900/20">
-					Save Credentials
+
+			<div class="pt-2 flex justify-end">
+				<button type="submit" class="px-5 py-2 bg-brand hover:bg-brand-hover text-white font-medium rounded-lg transition-colors shadow-sm">
+					Save credentials
 				</button>
 			</div>
 		</form>

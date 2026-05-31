@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import { Terminal } from '@xterm/xterm';
 	import { FitAddon } from '@xterm/addon-fit';
-	import { Terminal as TerminalIcon, AlertTriangle } from 'lucide-svelte';
+	import { Terminal as TerminalIcon } from 'lucide-svelte';
 	import '@xterm/xterm/css/xterm.css';
 
 	let terminalContainer: HTMLElement;
@@ -13,10 +13,13 @@
 		terminal = new Terminal({
 			cursorBlink: true,
 			theme: {
-				background: '#111827', // Tailwind gray-900
-				foreground: '#f3f4f6', // Tailwind gray-100
+				background: '#1a1a1a',
+				foreground: '#f5f5f5',
+				cursor: '#ff9a00',
+				selectionBackground: '#005aff55',
 			},
-			fontFamily: '"Fira Code", monospace',
+			fontFamily: '"Fira Code", "JetBrains Mono", monospace',
+			fontSize: 13,
 		});
 
 		fitAddon = new FitAddon();
@@ -25,7 +28,6 @@
 		fitAddon.fit();
 
 		const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-		// In dev use localhost:8080 where Go runs, in prod use same host
 		const wsHost = import.meta.env.DEV ? 'localhost:8080' : window.location.host;
 		const ws = new WebSocket(`${protocol}//${wsHost}/api/terminal`);
 		ws.binaryType = 'arraybuffer';
@@ -46,8 +48,7 @@
 
 		terminal.onData((data) => {
 			if (ws.readyState === WebSocket.OPEN) {
-				// Send as text since server handles text as raw data too if it doesn't parse as JSON
-				ws.send(data); 
+				ws.send(data);
 			}
 		});
 
@@ -57,7 +58,6 @@
 			}
 		});
 
-		// Handle resizing
 		const resizeObserver = new ResizeObserver(() => {
 			fitAddon.fit();
 		});
@@ -71,13 +71,31 @@
 	});
 </script>
 
-<div class="h-full flex flex-col space-y-4">
-	<div class="flex items-center space-x-3 mb-2">
-		<TerminalIcon size={24} class="text-emerald-400" />
-		<h2 class="text-2xl font-bold text-white">Console</h2>
-	</div>
+<svelte:head>
+	<title>Terminal - Rinkhals</title>
+</svelte:head>
 
-	<div class="bg-gray-800 rounded-lg p-4 border border-gray-700 flex-1 relative overflow-hidden shadow-xl">
-		<div bind:this={terminalContainer} class="absolute inset-0 p-4"></div>
+<div class="h-full flex flex-col space-y-4 max-w-7xl mx-auto w-full">
+	<header class="flex items-end justify-between pb-4 border-b border-line-soft">
+		<div>
+			<p class="text-xs uppercase tracking-wider text-ink-faint font-medium">Shell</p>
+			<h2 class="text-3xl font-semibold text-ink mt-1 tracking-tight flex items-center gap-2">
+				<TerminalIcon size={26} class="text-brand" />
+				Console
+			</h2>
+		</div>
+		<span class="text-xs text-ink-faint font-mono">/bin/sh</span>
+	</header>
+
+	<div class="bg-canvas rounded-xl border border-line-soft flex-1 relative overflow-hidden">
+		<div class="px-4 py-2 border-b border-line-soft bg-surface flex items-center gap-2">
+			<span class="w-2.5 h-2.5 rounded-full bg-coral"></span>
+			<span class="w-2.5 h-2.5 rounded-full bg-accent"></span>
+			<span class="w-2.5 h-2.5 rounded-full bg-brand"></span>
+			<span class="ml-3 text-xs text-ink-faint font-mono">interactive shell</span>
+		</div>
+		<div class="absolute inset-0 top-9 p-3 bg-[#1a1a1a]">
+			<div bind:this={terminalContainer} class="absolute inset-0 p-3"></div>
+		</div>
 	</div>
 </div>

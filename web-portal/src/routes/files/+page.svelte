@@ -9,12 +9,11 @@
     let error = $state('');
     let selectedFiles = $state<Set<string>>(new Set());
 
-    // Modals state
     let showDeleteConfirm = $state(false);
     let showRenameModal = $state(false);
     let showMoveModal = $state(false);
     let showNewFolderModal = $state(false);
-    
+
     let modalInput = $state('');
     let modalActionLoading = $state(false);
 
@@ -79,7 +78,6 @@
         files?.filter((f: any) => f.name.toLowerCase().includes(searchQuery.toLowerCase())) || []
     );
 
-    // API calls
     async function fsAction(action: string, targets: string[], destination?: string) {
         modalActionLoading = true;
         try {
@@ -120,132 +118,137 @@
     }
 </script>
 
-<div class="space-y-4">
-    <div class="flex items-center justify-between">
-        <h2 class="text-3xl font-bold bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">
-            File Browser
-        </h2>
+<svelte:head>
+    <title>File Browser - Rinkhals</title>
+</svelte:head>
+
+<div class="space-y-6 max-w-7xl mx-auto">
+    <header class="flex flex-col xl:flex-row xl:items-end xl:justify-between gap-4 pb-4 border-b border-line-soft">
+        <div>
+            <p class="text-xs uppercase tracking-wider text-ink-faint font-medium">Files</p>
+            <h2 class="text-3xl font-semibold text-ink mt-1 tracking-tight">File browser</h2>
+        </div>
         <div class="relative">
-            <Search class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+            <Search class="absolute left-3 top-1/2 -translate-y-1/2 text-ink-faint" size={16} />
             <input
                 bind:value={searchQuery}
                 type="text"
                 placeholder="Search files..."
-                class="bg-gray-800 text-white rounded-lg pl-10 pr-4 py-2 border border-gray-700 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors shadow-inner"
+                class="bg-canvas text-ink rounded-lg pl-9 pr-4 py-2 border border-line-soft focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition-colors text-sm w-64"
             />
         </div>
-    </div>
+    </header>
 
     <!-- Toolbar -->
-    <div class="bg-gray-800 rounded-lg p-3 border border-gray-700 flex items-center justify-between min-h-14">
-        <div class="flex items-center space-x-2">
-            <button onclick={() => { showNewFolderModal = true; modalInput = currentPath === '/' ? '/NewFolder' : currentPath + '/NewFolder'; }} class="flex items-center px-3 py-1.5 bg-gray-700 hover:bg-gray-600 rounded text-sm font-medium transition-colors text-white">
-                <FolderPlus size={16} class="mr-2" /> New Folder
+    <div class="bg-canvas rounded-xl p-3 border border-line-soft flex items-center justify-between min-h-14">
+        <div class="flex items-center gap-2">
+            <button onclick={() => { showNewFolderModal = true; modalInput = currentPath === '/' ? '/NewFolder' : currentPath + '/NewFolder'; }}
+                class="flex items-center px-3 py-1.5 bg-surface hover:bg-surface-warm border border-line-soft rounded-lg text-sm font-medium transition-colors text-ink">
+                <FolderPlus size={15} class="mr-2 text-ink-muted" /> New folder
             </button>
         </div>
-        
-        <div class="flex items-center space-x-2">
+
+        <div class="flex items-center gap-2">
             {#if selectedFiles.size > 0}
-                <span class="text-sm text-gray-400 mr-2">{selectedFiles.size} selected</span>
-                <button 
+                <span class="text-sm text-ink-muted mr-2">{selectedFiles.size} selected</span>
+                <button
                     onclick={promptRename}
-                    disabled={selectedFiles.size !== 1} 
-                    class="flex items-center px-3 py-1.5 bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:hover:bg-gray-700 text-blue-400 rounded text-sm font-medium transition-colors">
-                    <Edit2 size={16} class="mr-2" /> Rename
+                    disabled={selectedFiles.size !== 1}
+                    class="flex items-center px-3 py-1.5 bg-surface hover:bg-brand-soft border border-line-soft disabled:opacity-40 disabled:hover:bg-surface text-brand rounded-lg text-sm font-medium transition-colors">
+                    <Edit2 size={15} class="mr-2" /> Rename
                 </button>
-                <button 
+                <button
                     onclick={() => { showMoveModal = true; modalInput = currentPath === '/' ? '/target_directory' : currentPath; }}
-                    class="flex items-center px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-yellow-400 rounded text-sm font-medium transition-colors">
-                    <MoveRight size={16} class="mr-2" /> Move
+                    class="flex items-center px-3 py-1.5 bg-surface hover:bg-surface-warm border border-line-soft text-accent-hover rounded-lg text-sm font-medium transition-colors">
+                    <MoveRight size={15} class="mr-2" /> Move
                 </button>
-                <button 
+                <button
                     onclick={() => showDeleteConfirm = true}
-                    class="flex items-center px-3 py-1.5 bg-red-900/50 hover:bg-red-800 text-red-400 rounded text-sm font-medium transition-colors">
-                    <Trash2 size={16} class="mr-2" /> Delete
+                    class="flex items-center px-3 py-1.5 bg-surface-accent hover:bg-coral hover:text-white border border-coral/30 text-coral rounded-lg text-sm font-medium transition-colors">
+                    <Trash2 size={15} class="mr-2" /> Delete
                 </button>
             {/if}
         </div>
     </div>
 
-    <div class="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden shadow-lg">
-        <div class="bg-gray-900/50 px-6 py-4 border-b border-gray-700 flex items-center">
-            <button 
+    <div class="bg-canvas rounded-xl border border-line-soft overflow-hidden">
+        <div class="bg-surface px-5 py-3 border-b border-line-soft flex items-center">
+            <button
                 onclick={goUp}
                 disabled={currentPath === '/'}
-                class="p-2 -ml-2 mr-4 text-gray-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors rounded-lg hover:bg-gray-800"
+                class="p-1.5 -ml-1 mr-3 text-ink-muted hover:text-brand disabled:opacity-40 disabled:cursor-not-allowed transition-colors rounded-lg hover:bg-canvas"
             >
-                <ArrowUp size={20} />
+                <ArrowUp size={18} />
             </button>
-            <span class="text-gray-300 font-mono text-sm">{currentPath}</span>
+            <span class="text-ink-2 font-mono text-sm">{currentPath}</span>
         </div>
 
         <table class="w-full text-left">
-            <thead class="bg-gray-900/50 text-gray-400 border-b border-gray-700">
+            <thead class="bg-surface text-ink-muted border-b border-line-soft">
                 <tr>
-                    <th class="px-6 py-4 w-12">
-                        <input type="checkbox" 
+                    <th class="px-5 py-3 w-12">
+                        <input type="checkbox"
                             checked={filteredFiles.length > 0 && selectedFiles.size === filteredFiles.length}
                             onclick={toggleAll}
-                            class="rounded border-gray-600 text-emerald-500 focus:ring-emerald-500 bg-gray-900 cursor-pointer"
+                            class="rounded border-line text-brand focus:ring-brand/30 cursor-pointer"
                         />
                     </th>
-                    <th class="px-6 py-4 font-semibold text-sm">Name</th>
-                    <th class="px-6 py-4 font-semibold text-sm">Size</th>
-                    <th class="px-6 py-4 font-semibold text-sm hidden sm:table-cell">Modified</th>
-                    <th class="px-6 py-4 font-semibold text-sm text-right">Actions</th>
+                    <th class="px-5 py-3 font-semibold text-xs uppercase tracking-wider">Name</th>
+                    <th class="px-5 py-3 font-semibold text-xs uppercase tracking-wider">Size</th>
+                    <th class="px-5 py-3 font-semibold text-xs uppercase tracking-wider hidden sm:table-cell">Modified</th>
+                    <th class="px-5 py-3 font-semibold text-xs uppercase tracking-wider text-right">Actions</th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-gray-700">
+            <tbody class="divide-y divide-line-soft">
                 {#if loading}
-                    <tr><td colspan="5" class="px-6 py-8 text-center text-gray-500">Loading files...</td></tr>
+                    <tr><td colspan="5" class="px-5 py-8 text-center text-ink-faint">Loading files...</td></tr>
                 {:else if error}
-                    <tr><td colspan="5" class="px-6 py-8 text-center text-red-400">Error: {error}</td></tr>
+                    <tr><td colspan="5" class="px-5 py-8 text-center text-coral">Error: {error}</td></tr>
                 {:else if filteredFiles.length === 0}
-                    <tr><td colspan="5" class="px-6 py-8 text-center text-gray-500">No files found.</td></tr>
+                    <tr><td colspan="5" class="px-5 py-8 text-center text-ink-faint">No files found.</td></tr>
                 {:else}
                     {#each filteredFiles as file}
-                        <tr onclick={() => handleItemClick(file)} class="hover:bg-gray-700/50 transition-colors group cursor-pointer {selectedFiles.has(file.path) ? 'bg-gray-700/30' : ''}">
-                            <td class="px-6 py-4" onclick={(e) => e.stopPropagation()}>
-                                <input type="checkbox" 
+                        <tr onclick={() => handleItemClick(file)} class="hover:bg-surface-warm transition-colors group cursor-pointer {selectedFiles.has(file.path) ? 'bg-brand-soft/40' : ''}">
+                            <td class="px-5 py-3" onclick={(e) => e.stopPropagation()}>
+                                <input type="checkbox"
                                     checked={selectedFiles.has(file.path)}
                                     onclick={(e) => toggleSelection(e, file.path)}
-                                    class="rounded border-gray-600 text-emerald-500 focus:ring-emerald-500 bg-gray-900 cursor-pointer"
+                                    class="rounded border-line text-brand focus:ring-brand/30 cursor-pointer"
                                 />
                             </td>
-                            <td class="px-6 py-4">
-                                <div class="flex items-center space-x-3 text-white">
+                            <td class="px-5 py-3">
+                                <div class="flex items-center gap-3 text-ink">
                                     {#if file.type === 'folder'}
-                                        <Folder size={20} class="text-blue-400 fill-current" />
+                                        <Folder size={18} class="text-brand" />
                                     {:else if file.name.endsWith('.log')}
-                                        <FileText size={20} class="text-yellow-400" />
+                                        <FileText size={18} class="text-accent" />
                                     {:else}
-                                        <FileText size={20} class="text-gray-400" />
+                                        <FileText size={18} class="text-ink-faint" />
                                     {/if}
-                                    <span class="group-hover:text-emerald-400 transition-colors">{file.name}</span>
+                                    <span class="group-hover:text-brand transition-colors text-sm">{file.name}</span>
                                 </div>
                             </td>
-                            <td class="px-6 py-4 text-gray-400 text-sm">
-                                {file.type === 'folder' ? '--' : (file.size / 1024).toFixed(1) + ' KB'}
+                            <td class="px-5 py-3 text-ink-muted text-sm">
+                                {file.type === 'folder' ? '—' : (file.size / 1024).toFixed(1) + ' KB'}
                             </td>
-                            <td class="px-6 py-4 text-gray-400 text-sm hidden sm:table-cell">{file.modified}</td>
-                            <td class="px-6 py-4 text-right">
+                            <td class="px-5 py-3 text-ink-muted text-sm hidden sm:table-cell">{file.modified}</td>
+                            <td class="px-5 py-3 text-right">
                                 {#if file.type === 'file'}
                                     {#if file.isText}
-                                        <a 
-                                            href="/editor?path={encodeURIComponent(file.path)}" 
-                                            class="inline-block p-2 text-gray-400 hover:text-cyan-400 hover:bg-cyan-400/10 rounded-lg transition-colors mr-2"
+                                        <a
+                                            href="/editor?path={encodeURIComponent(file.path)}"
+                                            class="inline-block p-1.5 text-ink-muted hover:text-brand hover:bg-brand-soft rounded-lg transition-colors mr-1"
                                             title="Edit File"
                                         >
-                                            <Edit2 size={18} />
+                                            <Edit2 size={16} />
                                         </a>
                                     {/if}
-
-                                    <button 
+                                    <button
                                         onclick={(e) => handleDownload(e, file)}
-                                        class="p-2 text-gray-400 hover:text-emerald-400 hover:bg-emerald-400/10 rounded-lg transition-colors"
+                                        class="p-1.5 text-ink-muted hover:text-accent hover:bg-surface-warm rounded-lg transition-colors"
                                         title="Download"
                                     >
-                                        <Download size={18} />
+                                        <Download size={16} />
                                     </button>
                                 {/if}
                             </td>
@@ -259,18 +262,18 @@
 
 <!-- Modals -->
 {#if showDeleteConfirm}
-<div class="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-    <div class="bg-gray-800 border border-gray-700 rounded-xl p-6 max-w-md w-full shadow-2xl">
-        <div class="flex items-center text-red-400 mb-4">
-            <AlertTriangle size={24} class="mr-3" />
-            <h2 class="text-xl font-bold text-white">Confirm Deletion</h2>
+<div class="fixed inset-0 bg-ink/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div class="bg-canvas border border-line rounded-2xl p-6 max-w-md w-full shadow-2xl">
+        <div class="flex items-center text-coral mb-3">
+            <AlertTriangle size={22} class="mr-2" />
+            <h2 class="text-lg font-semibold text-ink">Confirm deletion</h2>
         </div>
-        <p class="text-gray-300 mb-6 font-medium">Are you sure you want to delete {selectedFiles.size} selected item(s)? This cannot be undone.</p>
-        <div class="flex justify-end space-x-3">
-            <button onclick={closeModals} class="px-4 py-2 rounded font-medium bg-gray-700 hover:bg-gray-600 text-white">Cancel</button>
-            <button onclick={() => fsAction('delete', Array.from(selectedFiles))} class="px-4 py-2 rounded font-medium bg-red-600 hover:bg-red-500 text-white flex items-center">
+        <p class="text-ink-2 text-sm mb-5">Delete {selectedFiles.size} selected item(s)? This cannot be undone.</p>
+        <div class="flex justify-end gap-2">
+            <button onclick={closeModals} class="px-4 py-2 rounded-lg font-medium bg-surface hover:bg-surface-warm border border-line-soft text-ink">Cancel</button>
+            <button onclick={() => fsAction('delete', Array.from(selectedFiles))} class="px-4 py-2 rounded-lg font-medium bg-coral hover:opacity-90 text-white flex items-center">
                 {#if modalActionLoading}<div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2"></div>{/if}
-                Yes, Delete
+                Yes, delete
             </button>
         </div>
     </div>
@@ -278,13 +281,13 @@
 {/if}
 
 {#if showRenameModal}
-<div class="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-    <div class="bg-gray-800 border border-gray-700 rounded-xl p-6 max-w-md w-full shadow-2xl">
-        <h2 class="text-xl font-bold text-white mb-4">Rename Item</h2>
-        <input type="text" bind:value={modalInput} class="w-full bg-gray-950 border border-gray-600 rounded px-3 py-2 text-white mb-6 font-mono text-sm focus:outline-none focus:border-blue-500" />
-        <div class="flex justify-end space-x-3">
-            <button onclick={closeModals} class="px-4 py-2 rounded font-medium bg-gray-700 hover:bg-gray-600 text-white">Cancel</button>
-            <button onclick={() => fsAction('rename', Array.from(selectedFiles), modalInput)} class="px-4 py-2 rounded font-medium bg-blue-600 hover:bg-blue-500 text-white flex items-center">
+<div class="fixed inset-0 bg-ink/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div class="bg-canvas border border-line rounded-2xl p-6 max-w-md w-full shadow-2xl">
+        <h2 class="text-lg font-semibold text-ink mb-4">Rename item</h2>
+        <input type="text" bind:value={modalInput} class="w-full bg-canvas border border-line rounded-lg px-3 py-2 text-ink mb-5 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand" />
+        <div class="flex justify-end gap-2">
+            <button onclick={closeModals} class="px-4 py-2 rounded-lg font-medium bg-surface hover:bg-surface-warm border border-line-soft text-ink">Cancel</button>
+            <button onclick={() => fsAction('rename', Array.from(selectedFiles), modalInput)} class="px-4 py-2 rounded-lg font-medium bg-brand hover:bg-brand-hover text-white flex items-center">
                 {#if modalActionLoading}<div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2"></div>{/if}
                 Rename
             </button>
@@ -294,14 +297,14 @@
 {/if}
 
 {#if showMoveModal}
-<div class="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-    <div class="bg-gray-800 border border-gray-700 rounded-xl p-6 max-w-md w-full shadow-2xl">
-        <h2 class="text-xl font-bold text-white mb-4">Move {selectedFiles.size} Item(s)</h2>
-        <label for="move_dest" class="block text-sm text-gray-400 mb-1">Destination Directory (absolute path):</label>
-        <input id="move_dest" type="text" bind:value={modalInput} class="w-full bg-gray-950 border border-gray-600 rounded px-3 py-2 text-white mb-6 font-mono text-sm focus:outline-none focus:border-yellow-500" />
-        <div class="flex justify-end space-x-3">
-            <button onclick={closeModals} class="px-4 py-2 rounded font-medium bg-gray-700 hover:bg-gray-600 text-white">Cancel</button>
-            <button onclick={() => fsAction('move', Array.from(selectedFiles), modalInput)} class="px-4 py-2 rounded font-medium bg-yellow-600 hover:bg-yellow-500 text-white flex items-center">
+<div class="fixed inset-0 bg-ink/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div class="bg-canvas border border-line rounded-2xl p-6 max-w-md w-full shadow-2xl">
+        <h2 class="text-lg font-semibold text-ink mb-4">Move {selectedFiles.size} item(s)</h2>
+        <label for="move_dest" class="block text-xs text-ink-muted mb-1">Destination directory (absolute path)</label>
+        <input id="move_dest" type="text" bind:value={modalInput} class="w-full bg-canvas border border-line rounded-lg px-3 py-2 text-ink mb-5 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent" />
+        <div class="flex justify-end gap-2">
+            <button onclick={closeModals} class="px-4 py-2 rounded-lg font-medium bg-surface hover:bg-surface-warm border border-line-soft text-ink">Cancel</button>
+            <button onclick={() => fsAction('move', Array.from(selectedFiles), modalInput)} class="px-4 py-2 rounded-lg font-medium bg-accent hover:bg-accent-hover text-white flex items-center">
                 {#if modalActionLoading}<div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2"></div>{/if}
                 Move
             </button>
@@ -311,14 +314,14 @@
 {/if}
 
 {#if showNewFolderModal}
-<div class="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-    <div class="bg-gray-800 border border-gray-700 rounded-xl p-6 max-w-md w-full shadow-2xl">
-        <h2 class="text-xl font-bold text-white mb-4">New Folder</h2>
-        <label for="new_folder" class="block text-sm text-gray-400 mb-1">Folder Path:</label>
-        <input id="new_folder" type="text" bind:value={modalInput} class="w-full bg-gray-950 border border-gray-600 rounded px-3 py-2 text-white mb-6 font-mono text-sm focus:outline-none focus:border-emerald-500" />
-        <div class="flex justify-end space-x-3">
-            <button onclick={closeModals} class="px-4 py-2 rounded font-medium bg-gray-700 hover:bg-gray-600 text-white">Cancel</button>
-            <button onclick={() => fsAction('mkdir', [], modalInput)} class="px-4 py-2 rounded font-medium bg-emerald-600 hover:bg-emerald-500 text-white flex items-center">
+<div class="fixed inset-0 bg-ink/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div class="bg-canvas border border-line rounded-2xl p-6 max-w-md w-full shadow-2xl">
+        <h2 class="text-lg font-semibold text-ink mb-4">New folder</h2>
+        <label for="new_folder" class="block text-xs text-ink-muted mb-1">Folder path</label>
+        <input id="new_folder" type="text" bind:value={modalInput} class="w-full bg-canvas border border-line rounded-lg px-3 py-2 text-ink mb-5 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand" />
+        <div class="flex justify-end gap-2">
+            <button onclick={closeModals} class="px-4 py-2 rounded-lg font-medium bg-surface hover:bg-surface-warm border border-line-soft text-ink">Cancel</button>
+            <button onclick={() => fsAction('mkdir', [], modalInput)} class="px-4 py-2 rounded-lg font-medium bg-brand hover:bg-brand-hover text-white flex items-center">
                 {#if modalActionLoading}<div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2"></div>{/if}
                 Create
             </button>

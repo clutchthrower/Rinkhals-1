@@ -40,7 +40,7 @@
 
     async function saveFile() {
         if (!isFileLoaded && !content) return;
-        
+
         saving = true;
         message = { text: '', isError: false };
         try {
@@ -74,72 +74,75 @@
     <title>Text Editor - Rinkhals</title>
 </svelte:head>
 
-<div class="space-y-6 h-full flex flex-col">
-    <div class="flex items-center justify-between">
-        <h2 class="text-3xl font-bold bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent flex items-center gap-3">
-            <FileText size={32} class="text-emerald-400"/>
-            Text Editor
-        </h2>
+<div class="space-y-6 h-full flex flex-col max-w-7xl mx-auto w-full">
+    <header class="flex flex-col xl:flex-row xl:items-end xl:justify-between gap-4 pb-4 border-b border-line-soft">
+        <div>
+            <p class="text-xs uppercase tracking-wider text-ink-faint font-medium">Configuration</p>
+            <h2 class="text-3xl font-semibold text-ink mt-1 tracking-tight flex items-center gap-2">
+                <FileText size={26} class="text-brand" />
+                Text editor
+            </h2>
+        </div>
 
-        <div class="flex items-center space-x-4">
+        <div class="flex flex-wrap items-center gap-3">
             {#if message.text}
-                <div class="flex items-center text-sm {message.isError ? 'text-red-400' : 'text-emerald-400'}">
-                    {#if message.isError}<AlertCircle size={16} class="mr-2"/>{/if}
+                <div class="flex items-center text-sm {message.isError ? 'text-coral' : 'text-brand'}">
+                    {#if message.isError}<AlertCircle size={15} class="mr-1.5" />{/if}
                     {message.text}
                 </div>
             {/if}
 
-            <div class="flex items-center bg-gray-800 rounded-lg p-1 border border-gray-700">
-                <input 
-                    type="text" 
-                    bind:value={filePath} 
-                    placeholder="Enter file path..." 
-                    class="bg-transparent border-none text-white px-3 py-1.5 focus:outline-none w-64 text-sm"
+            <div class="flex items-center bg-canvas rounded-lg p-1 border border-line-soft">
+                <input
+                    type="text"
+                    bind:value={filePath}
+                    placeholder="Enter file path..."
+                    class="bg-transparent border-none text-ink px-2 py-1.5 focus:outline-none w-64 text-sm font-mono"
                     onkeypress={(e) => e.key === 'Enter' && loadFile()}
                 />
-                <button 
+                <button
                     onclick={loadFile}
                     disabled={loading}
-                    class="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 rounded text-sm text-white font-medium transition-colors disabled:opacity-50"
+                    class="px-3 py-1.5 bg-surface hover:bg-surface-warm border border-line-soft rounded text-sm text-ink font-medium transition-colors disabled:opacity-50"
                 >
                     Load
                 </button>
             </div>
 
-            <button 
+            <button
                 onclick={saveFile}
                 disabled={saving || loading || !content}
-                class="flex items-center px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg font-medium transition-colors disabled:opacity-50 gap-2"
+                class="flex items-center px-4 py-2 bg-brand hover:bg-brand-hover text-white rounded-lg font-medium transition-colors disabled:opacity-50 gap-2 shadow-sm"
             >
                 {#if saving}
-                    <Loader2 size={18} class="animate-spin" />
+                    <Loader2 size={16} class="animate-spin" />
                     Saving...
                 {:else}
-                    <Save size={18} />
-                    Save File
+                    <Save size={16} />
+                    Save file
                 {/if}
             </button>
         </div>
-    </div>
+    </header>
 
-    <div class="flex-1 rounded-xl overflow-hidden border border-gray-700 relative bg-gray-950">
+    <div class="flex-1 rounded-xl overflow-hidden border border-line-soft relative bg-canvas">
         {#if loading}
-            <div class="absolute inset-0 bg-gray-900/50 flex flex-col items-center justify-center z-10 backdrop-blur-sm">
-                <Loader2 size={48} class="text-emerald-500 animate-spin mb-4" />
-                <span class="text-gray-300 font-medium">Loading contents...</span>
+            <div class="absolute inset-0 bg-canvas/70 flex flex-col items-center justify-center z-10 backdrop-blur-sm">
+                <Loader2 size={40} class="text-brand animate-spin mb-3" />
+                <span class="text-ink-2 font-medium text-sm">Loading contents...</span>
             </div>
         {:else if !isFileLoaded && !content}
-            <div class="absolute inset-0 flex flex-col items-center justify-center text-gray-500">
-                <FileText size={48} class="mb-4 opacity-50" />
-                <p class="text-lg font-medium">No file loaded</p>
-                <p class="text-sm">Enter a file path above, or begin typing to create a new file.</p>
+            <div class="absolute inset-0 flex flex-col items-center justify-center text-ink-faint">
+                <FileText size={40} class="mb-3 opacity-60" />
+                <p class="text-base font-medium text-ink-muted">No file loaded</p>
+                <p class="text-sm">Enter a file path above, or start typing to create a new file.</p>
             </div>
         {/if}
-        
+
         <textarea
             bind:value={content}
             oninput={() => { if(!isFileLoaded) isFileLoaded = true; }}
-            class="w-full h-full bg-transparent text-gray-300 font-mono text-sm p-4 focus:outline-none resize-none relative z-0 {(!isFileLoaded && !content) ? 'opacity-0' : 'opacity-100'}"
+            class="w-full h-full bg-transparent text-ink-2 font-mono text-[13px] p-4 focus:outline-none resize-none relative z-0 {(!isFileLoaded && !content) ? 'opacity-0' : 'opacity-100'}"
             placeholder="File content..."
             spellcheck="false"
         ></textarea>
