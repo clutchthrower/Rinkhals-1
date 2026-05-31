@@ -294,6 +294,13 @@ func handleApp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	id := parts[0]
+	// App ids are directory names (e.g. "40-moonraker"); reject anything that
+	// isn't a plain identifier so a crafted path can't reach the shell helpers,
+	// several of which interpolate the id unquoted.
+	if !isSafeKey(id) {
+		http.Error(w, "Invalid app id", http.StatusBadRequest)
+		return
+	}
 	sub := ""
 	if len(parts) == 2 {
 		sub = parts[1]
@@ -329,7 +336,8 @@ func handleApp(w http.ResponseWriter, r *http.Request) {
 		case "stop":
 			runAppHelper(w, "stop_app", id)
 		case "restart":
-			runAppCmd(w, fmt.Sprintf("stop_app %s; sleep 1; start_app %s", id, id))
+			q := shellQuote(id)
+			runAppCmd(w, fmt.Sprintf("stop_app %s; sleep 1; start_app %s", q, q))
 		default:
 			http.Error(w, "Invalid action", http.StatusBadRequest)
 		}
