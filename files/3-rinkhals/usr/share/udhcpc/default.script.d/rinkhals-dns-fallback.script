@@ -36,6 +36,7 @@ case "$1" in
         TMP=$(mktemp)
         grep -vE "${FALLBACK_TAG}\$" "$RESOLV" > "$TMP" 2>/dev/null || true
         mv "$TMP" "$RESOLV"
+        chmod 644 "$RESOLV"
 
         # If nothing supplied a nameserver, add the public fallback so DNS
         # resolution doesn't break entirely. The stock script writes its
