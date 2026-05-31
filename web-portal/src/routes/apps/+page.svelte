@@ -363,96 +363,101 @@
 </svelte:head>
 
 <div class="space-y-6 max-w-7xl mx-auto w-full">
-	<header class="pb-4 border-b border-line-soft space-y-4">
-		<div class="flex flex-col xl:flex-row xl:items-end xl:justify-between gap-4">
-			<div>
+	<header class="pb-4 border-b border-line-soft">
+		<!-- Row 1: title + tab toggle (fixed positions) -->
+		<div class="flex items-start justify-between gap-4">
+			<div class="min-w-0">
 				<p class="text-xs uppercase tracking-wider text-ink-faint font-medium">Apps</p>
 				<h2 class="text-3xl font-semibold text-ink mt-1 tracking-tight flex items-center gap-2">
 					<Boxes size={26} class="text-brand" />
-					{tab === "installed" ? "Installed apps" : "Browse catalog"}
+					Apps
 				</h2>
-				<p class="text-ink-muted text-sm mt-2">
+				<!-- Reserved subtitle slot; height fixed so swapping text doesn't shift layout -->
+				<p class="text-ink-muted text-sm mt-2 h-5">
 					{tab === "installed"
-						? "Enable, start and configure the apps shipped with Rinkhals."
+						? "Enable, start and configure the apps installed on this printer."
 						: "Discover and install community apps from Rinkhals.Apps."}
 				</p>
 			</div>
 
-			<!-- Tab toggle + filters -->
-			<div class="flex flex-wrap items-center gap-2">
-				<div class="inline-flex bg-surface border border-line-soft rounded-lg p-0.5">
-					<button
-						type="button"
-						onclick={() => (tab = "installed")}
-						class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors {tab === 'installed' ? 'bg-canvas text-brand shadow-sm' : 'text-ink-muted hover:text-ink'}"
-					>
-						Installed
-					</button>
-					<button
-						type="button"
-						onclick={() => (tab = "catalog")}
-						class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors {tab === 'catalog' ? 'bg-canvas text-brand shadow-sm' : 'text-ink-muted hover:text-ink'}"
-					>
-						Catalog
-					</button>
-				</div>
-
-				{#if tab === "installed"}
-					<div class="relative">
-						<Search class="absolute left-3 top-1/2 -translate-y-1/2 text-ink-faint" size={15} />
-						<input
-							bind:value={searchQuery}
-							type="text"
-							placeholder="Search..."
-							class="bg-canvas text-ink rounded-lg pl-9 pr-3 py-2 border border-line-soft focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 text-sm w-44"
-						/>
-					</div>
-					<select
-						bind:value={stateFilter}
-						class="bg-canvas text-ink border border-line-soft rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
-					>
-						<option value="all">All states</option>
-						<option value="enabled">Enabled</option>
-						<option value="disabled">Disabled</option>
-						<option value="running">Running</option>
-					</select>
-					<select
-						bind:value={sourceFilter}
-						class="bg-canvas text-ink border border-line-soft rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
-					>
-						<option value="all">All sources</option>
-						<option value="system">System</option>
-						<option value="user">User</option>
-					</select>
-				{:else}
-					<div class="relative">
-						<Search class="absolute left-3 top-1/2 -translate-y-1/2 text-ink-faint" size={15} />
-						<input
-							bind:value={catalogSearch}
-							type="text"
-							placeholder="Search catalog..."
-							class="bg-canvas text-ink rounded-lg pl-9 pr-3 py-2 border border-line-soft focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 text-sm w-52"
-						/>
-					</div>
-					<button
-						type="button"
-						onclick={() => fetchCatalog(true)}
-						disabled={catalogLoading}
-						class="flex items-center gap-1.5 px-3 py-2 bg-canvas hover:bg-surface-warm border border-line-soft rounded-lg text-sm text-ink-2 disabled:opacity-50 transition-colors"
-					>
-						{#if catalogLoading}
-							<Loader2 size={14} class="animate-spin" />
-						{:else}
-							<RefreshCw size={14} />
-						{/if}
-						Refresh
-					</button>
-				{/if}
+			<div class="inline-flex bg-surface border border-line-soft rounded-lg p-0.5 shrink-0">
+				<button
+					type="button"
+					onclick={() => (tab = "installed")}
+					class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors {tab === 'installed' ? 'bg-canvas text-brand shadow-sm' : 'text-ink-muted hover:text-ink'}"
+				>
+					Installed
+				</button>
+				<button
+					type="button"
+					onclick={() => (tab = "catalog")}
+					class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors {tab === 'catalog' ? 'bg-canvas text-brand shadow-sm' : 'text-ink-muted hover:text-ink'}"
+				>
+					Catalog
+				</button>
 			</div>
 		</div>
 
-		{#if tab === "catalog" && catalog}
-			<div class="flex flex-wrap items-center gap-3 text-[11px] text-ink-faint">
+		<!-- Row 2: filter slot, fixed height, contents swap per tab. The flex
+		     wrapper has a stable min-height so the row below it never moves. -->
+		<div class="flex flex-wrap items-center gap-2 mt-4 min-h-[40px]">
+			{#if tab === "installed"}
+				<div class="relative">
+					<Search class="absolute left-3 top-1/2 -translate-y-1/2 text-ink-faint" size={15} />
+					<input
+						bind:value={searchQuery}
+						type="text"
+						placeholder="Search..."
+						class="bg-canvas text-ink rounded-lg pl-9 pr-3 py-2 border border-line-soft focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 text-sm w-52"
+					/>
+				</div>
+				<select
+					bind:value={stateFilter}
+					class="bg-canvas text-ink border border-line-soft rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
+				>
+					<option value="all">All states</option>
+					<option value="enabled">Enabled</option>
+					<option value="disabled">Disabled</option>
+					<option value="running">Running</option>
+				</select>
+				<select
+					bind:value={sourceFilter}
+					class="bg-canvas text-ink border border-line-soft rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
+				>
+					<option value="all">All sources</option>
+					<option value="system">System</option>
+					<option value="user">User</option>
+				</select>
+			{:else}
+				<div class="relative">
+					<Search class="absolute left-3 top-1/2 -translate-y-1/2 text-ink-faint" size={15} />
+					<input
+						bind:value={catalogSearch}
+						type="text"
+						placeholder="Search catalog..."
+						class="bg-canvas text-ink rounded-lg pl-9 pr-3 py-2 border border-line-soft focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 text-sm w-52"
+					/>
+				</div>
+				<button
+					type="button"
+					onclick={() => fetchCatalog(true)}
+					disabled={catalogLoading}
+					class="flex items-center gap-1.5 px-3 py-2 bg-canvas hover:bg-surface-warm border border-line-soft rounded-lg text-sm text-ink-2 disabled:opacity-50 transition-colors"
+				>
+					{#if catalogLoading}
+						<Loader2 size={14} class="animate-spin" />
+					{:else}
+						<RefreshCw size={14} />
+					{/if}
+					Refresh
+				</button>
+			{/if}
+		</div>
+
+		<!-- Row 3: info strip, fixed height. Empty on the Installed tab so
+		     switching tabs never shifts the grid below. -->
+		<div class="mt-3 h-5 text-[11px] text-ink-faint flex flex-wrap items-center gap-3">
+			{#if tab === "catalog" && catalog}
 				<span class="inline-flex items-center gap-1">
 					<Package size={12} /> Release <span class="font-mono text-ink-muted">{catalog.release || "(unknown)"}</span>
 				</span>
@@ -471,8 +476,8 @@
 				>
 					Source <ExternalLink size={11} />
 				</a>
-			</div>
-		{/if}
+			{/if}
+		</div>
 	</header>
 
 	{#if tab === "installed"}
