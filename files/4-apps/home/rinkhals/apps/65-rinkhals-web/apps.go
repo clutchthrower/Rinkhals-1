@@ -354,6 +354,60 @@ func handleApp(w http.ResponseWriter, r *http.Request) {
 		}
 		json.NewEncoder(w).Encode(app)
 
+	case sub == "" && r.Method == "DELETE":
+		// Uninstall a user app: stop it, disable it, remove the directory plus
+		// any persisted/temporary config and stray flag files. Only user apps
+		// (under USER_APP_PATH) can be uninstalled - system apps would reappear
+		// at the next boot from the SWU bundle anyway, so deleting them is a
+		// no-op that surprises the user.
+		root, source := resolveAppRoot(id)
+		if source != "user" {
+			http.Error(w, "Cannot uninstall a system app; system apps ship in the firmware", http.StatusUnprocessableEntity)
+			return
+		}
+		// Defence in depth: confirm the resolved path is really under userAppPath
+		// before we hand it to os.RemoveAll. isSafeKey already rejects '/', so
+		// this guards against a future symlink at $USER_APP_PATH/foo pointing
+		// outside the tree.
+		rel, relErr := filepath.Rel(userAppPath, root)
+		if relErr != nil || strings.HasPrefix(rel, "..") || rel == "." || rel == "" {
+			http.Error(w, "Invalid app path", http.StatusBadRequest)
+			return
+		}
+
+		// Best-effort: stop and disable the app before removing files. We don't
+		// fail the uninstall if these fail; an already-stopped app is fine and
+		// disable_app on a missing dir is a no-op.
+		preCmd := fmt.Sprintf(". %s\nstop_app %s 2>/dev/null || true\ndisable_app %s 2>/dev/null || true\n",
+			toolsSh, shellQuote(id), shellQuote(id))
+		_ = exec.Command("sh", "-c", preCmd).Run()
+
+		var rmErrs []string
+		if err := os.RemoveAll(root); err != nil {
+			rmErrs = append(rmErrs, "app directory: "+err.Error())
+		}
+		// Persistent and temporary user config, plus top-level enable/disable
+		// flags for the user-app case. Each is best-effort; missing files are
+		// expected and not errors.
+		_ = os.Remove(filepath.Join(userAppPath, id+".config"))
+		_ = os.Remove(filepath.Join(userAppPath, id+".enabled"))
+		_ = os.Remove(filepath.Join(userAppPath, id+".disabled"))
+		_ = os.Remove(filepath.Join(temporaryAppPath, id+".config"))
+
+		// Catalog "Installed" state derives from app dirs on disk, so bust it.
+		invalidateCatalog()
+
+		resp := map[string]interface{}{
+			"success": len(rmErrs) == 0,
+			"app":     id,
+		}
+		if len(rmErrs) > 0 {
+			resp["output"] = strings.Join(rmErrs, "; ")
+		} else {
+			resp["output"] = "Uninstalled " + id
+		}
+		json.NewEncoder(w).Encode(resp)
+
 	case sub == "enable" && r.Method == "POST":
 		runAppHelper(w, "enable_app", id)
 

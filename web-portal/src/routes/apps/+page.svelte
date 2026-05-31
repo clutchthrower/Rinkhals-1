@@ -17,7 +17,9 @@
 		CheckCircle2,
 		RefreshCw,
 		Package,
-		ExternalLink
+		ExternalLink,
+		Trash2,
+		AlertTriangle
 	} from "lucide-svelte";
 
 	type Property = {
@@ -105,6 +107,8 @@
 	let catalogSearch = $state("");
 
 	let busyApps = $state<Set<string>>(new Set());
+	let uninstallTarget = $state<App | null>(null);
+	let uninstallRunning = $state(false);
 	let configureApp = $state<App | null>(null);
 	let pendingConfig = $state<Record<string, string>>({});
 	let configSaving = $state(false);
@@ -245,6 +249,34 @@
 			showToast(`${app.name} ${app.enabled ? "disabled" : "enabled"}`);
 		} catch {
 			// toast already shown
+		}
+	}
+
+	async function confirmUninstall(app: App) {
+		if (app.source !== "user") return;
+		uninstallTarget = app;
+	}
+
+	async function performUninstall() {
+		if (!uninstallTarget) return;
+		const app = uninstallTarget;
+		uninstallRunning = true;
+		try {
+			const res = await fetch(`${apiHost}/api/apps/${app.id}`, { method: "DELETE" });
+			const data = await res.json().catch(() => ({}));
+			if (!res.ok || data.success === false) {
+				throw new Error(data.output || `HTTP ${res.status}`);
+			}
+			showToast(`${app.name} uninstalled`);
+			// If the drawer is open on this app, close it: the app is gone.
+			if (configureApp?.id === app.id) configureApp = null;
+			// Refresh both lists. The catalog's "Installed" pill should flip back to "Install".
+			await Promise.all([fetchApps(), fetchCatalog(true)]);
+		} catch (e: any) {
+			showToast(e.message || "Uninstall failed", "err");
+		} finally {
+			uninstallRunning = false;
+			uninstallTarget = null;
 		}
 	}
 
@@ -648,6 +680,18 @@
 								{/if}
 							</button>
 						{/if}
+						{#if app.source === "user"}
+							<button
+								type="button"
+								onclick={() => confirmUninstall(app)}
+								disabled={isBusy}
+								title="Uninstall this app"
+								aria-label="Uninstall {app.name}"
+								class="{hasVisibleProperties(app) ? '' : 'ml-auto '}p-1.5 rounded-lg text-ink-faint hover:text-coral hover:bg-surface-accent transition-colors disabled:opacity-50"
+							>
+								<Trash2 size={14} />
+							</button>
+						{/if}
 						{#if isBusy}
 							<Loader2 size={14} class="text-ink-faint animate-spin ml-auto" />
 						{/if}
@@ -931,6 +975,55 @@
 {/if}
 
 <!-- Toast -->
+<!-- Uninstall confirmation -->
+{#if uninstallTarget}
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div
+		class="fixed inset-0 bg-ink/40 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+		onclick={() => !uninstallRunning && (uninstallTarget = null)}
+	>
+		<div
+			class="bg-canvas border border-line rounded-2xl p-6 max-w-md w-full shadow-2xl"
+			onclick={(e) => e.stopPropagation()}
+		>
+			<div class="flex items-center text-coral mb-3">
+				<AlertTriangle size={22} class="mr-2" />
+				<h2 class="text-lg font-semibold text-ink">Uninstall {uninstallTarget.name}?</h2>
+			</div>
+			<p class="text-ink-2 text-sm mb-2">
+				This removes the app and all its saved configuration. The app will be stopped first.
+			</p>
+			<p class="text-ink-muted text-xs mb-5">
+				<span class="font-mono">{uninstallTarget.id}</span> &middot; user app
+			</p>
+			<div class="flex justify-end gap-2">
+				<button
+					type="button"
+					onclick={() => (uninstallTarget = null)}
+					disabled={uninstallRunning}
+					class="px-4 py-2 rounded-lg font-medium bg-surface hover:bg-surface-warm border border-line-soft text-ink disabled:opacity-50"
+				>
+					Cancel
+				</button>
+				<button
+					type="button"
+					onclick={performUninstall}
+					disabled={uninstallRunning}
+					class="px-4 py-2 rounded-lg font-medium bg-coral hover:opacity-90 text-white flex items-center gap-2 disabled:opacity-50"
+				>
+					{#if uninstallRunning}
+						<Loader2 size={14} class="animate-spin" />
+					{:else}
+						<Trash2 size={14} />
+					{/if}
+					Uninstall
+				</button>
+			</div>
+		</div>
+	</div>
+{/if}
+
 {#if toast}
 	<div class="fixed bottom-5 right-5 z-50">
 		<div class="px-4 py-2.5 rounded-lg shadow-lg border text-sm font-medium {toast.tone === 'err' ? 'bg-surface-accent text-coral border-coral/40' : 'bg-canvas text-ink border-line-soft'}">
