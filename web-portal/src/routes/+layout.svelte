@@ -2,8 +2,15 @@
 	import { onMount } from "svelte";
 	import { page } from "$app/stores";
 	import "../app.css";
-	import { LayoutDashboard, FolderOpen, Terminal, Settings, FileText, ScrollText, ShieldAlert } from "lucide-svelte";
+	import { LayoutDashboard, FolderOpen, Terminal, Settings, FileText, ScrollText, ShieldAlert, Sun, Moon, Monitor } from "lucide-svelte";
+	import { themePreference, resolvedTheme, cycleTheme, type ThemePreference } from "$lib/theme";
 	let { children } = $props();
+
+	const themeLabels: Record<ThemePreference, string> = {
+		system: "System theme",
+		light: "Light theme",
+		dark: "Dark theme"
+	};
 
 	let showPasswordModal = $state(false);
 	let newUsername = $state("admin");
@@ -97,9 +104,30 @@
 			{/each}
 		</nav>
 
-		<div class="px-4 py-4 border-t border-line-soft text-[11px] text-ink-faint">
-			<span class="inline-block w-1.5 h-1.5 rounded-full bg-accent align-middle mr-2"></span>
-			Rinkhals Web &middot; dev preview
+		<div class="px-3 py-3 border-t border-line-soft flex items-center gap-2">
+			<button
+				type="button"
+				onclick={cycleTheme}
+				title="Theme: {themeLabels[$themePreference]} (click to cycle)"
+				aria-label="Cycle theme"
+				class="flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-ink-muted hover:bg-surface-warm hover:text-ink transition-colors border border-line-soft"
+			>
+				{#if $themePreference === "system"}
+					<Monitor size={14} class="text-ink-muted" />
+				{:else if $themePreference === "light"}
+					<Sun size={14} class="text-ink-muted" />
+				{:else}
+					<Moon size={14} class="text-ink-muted" />
+				{/if}
+				<span class="capitalize">{$themePreference}</span>
+				{#if $themePreference === "system"}
+					<span class="text-ink-faint">({$resolvedTheme})</span>
+				{/if}
+			</button>
+			<span class="ml-auto text-[11px] text-ink-faint">
+				<span class="inline-block w-1.5 h-1.5 rounded-full bg-accent align-middle mr-1"></span>
+				dev
+			</span>
 		</div>
 	</aside>
 
