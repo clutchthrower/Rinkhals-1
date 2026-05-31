@@ -60,6 +60,10 @@ type AppManifest struct {
 	AppVersion   string                            `json:"version"`
 	Requirements *AppRequirements                  `json:"requirements,omitempty"`
 	Properties   map[string]map[string]interface{} `json:"properties,omitempty"`
+	// Optional upstream-tracking declaration. Only catalog apps (and only those
+	// that actually pull binaries from somewhere) populate this. Local apps
+	// loaded by /api/apps simply ignore it.
+	Upstream *UpstreamRef `json:"upstream,omitempty"`
 }
 
 // App is the wire shape returned by /api/apps.

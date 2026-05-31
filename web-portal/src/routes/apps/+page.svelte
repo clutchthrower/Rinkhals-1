@@ -57,6 +57,9 @@
 		asset_size?: number;
 		installed: boolean;
 		installed_version?: string;
+		upstream?: { type: string; repo: string; strip_prefix?: string; branch?: string };
+		upstream_version?: string;
+		upstream_url?: string;
 	};
 
 	type Catalog = {
@@ -763,6 +766,27 @@
 								<span class="inline-flex items-center gap-1"><Download size={11} /> {formatSize(entry.asset_size)}</span>
 							{/if}
 						</div>
+
+						{#if entry.upstream_version}
+							{@const stale = entry.upstream_version !== entry.version}
+							<div class="flex items-center gap-2 text-[11px] {stale ? 'text-coral' : 'text-ink-faint'}">
+								<span class="inline-flex items-center gap-1">
+									Upstream:
+									{#if entry.upstream_url}
+										<a href={entry.upstream_url} target="_blank" rel="noopener noreferrer" class="font-mono hover:underline inline-flex items-center gap-0.5">
+											{entry.upstream_version}<ExternalLink size={10} />
+										</a>
+									{:else}
+										<span class="font-mono">{entry.upstream_version}</span>
+									{/if}
+								</span>
+								{#if stale}
+									<span class="px-1.5 py-0.5 rounded bg-surface-accent border border-coral/30 uppercase tracking-wider text-[9px] font-semibold" title="Bundled v{entry.version} is behind upstream">
+										Bundled is behind
+									</span>
+								{/if}
+							</div>
+						{/if}
 
 						<div class="flex items-center gap-2 mt-auto pt-3 border-t border-line-soft">
 							{#if !entry.available_for_model}

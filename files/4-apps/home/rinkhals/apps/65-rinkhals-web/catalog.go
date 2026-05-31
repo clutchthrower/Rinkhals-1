@@ -34,20 +34,38 @@ const (
 	catalogUserAgent      = "rinkhals-web"
 )
 
+// UpstreamRef mirrors the optional "upstream" block in app.json. Apps that
+// pull binaries from an external source declare where to look so we can show
+// the live upstream version next to the bundled one.
+type UpstreamRef struct {
+	Type        string `json:"type"`                   // "github-release" or "github-branch-head"
+	Repo        string `json:"repo"`                   // owner/name
+	StripPrefix string `json:"strip_prefix,omitempty"` // e.g. "v" so v1.2.3 reads as 1.2.3
+	Branch      string `json:"branch,omitempty"`       // for github-branch-head; defaults to "master"
+}
+
 // CatalogApp is the wire shape returned to the UI - the per-app manifest plus
-// the installation-aware fields (download URL for this printer model, install state).
+// the installation-aware fields (download URL for this printer model, install
+// state) and upstream-tracking fields (live upstream version, link).
 type CatalogApp struct {
-	ID                 string           `json:"id"`
-	Name               string           `json:"name"`
-	Description        string           `json:"description"`
-	Version            string           `json:"version"`
-	Requirements       *AppRequirements `json:"requirements,omitempty"`
-	Depends            []string         `json:"depends,omitempty"`
-	AvailableForModel  bool             `json:"available_for_model"`
-	DownloadURL        string           `json:"download_url,omitempty"`
-	AssetSize          int64            `json:"asset_size,omitempty"`
-	Installed          bool             `json:"installed"`
-	InstalledVersion   string           `json:"installed_version,omitempty"`
+	ID                string           `json:"id"`
+	Name              string           `json:"name"`
+	Description       string           `json:"description"`
+	Version           string           `json:"version"`
+	Requirements      *AppRequirements `json:"requirements,omitempty"`
+	Depends           []string         `json:"depends,omitempty"`
+	AvailableForModel bool             `json:"available_for_model"`
+	DownloadURL       string           `json:"download_url,omitempty"`
+	AssetSize         int64            `json:"asset_size,omitempty"`
+	Installed         bool             `json:"installed"`
+	InstalledVersion  string           `json:"installed_version,omitempty"`
+	// Upstream tracking. Upstream is the declared source (so the UI can link
+	// to it); UpstreamVersion is what we resolved at fetch time, blank when
+	// unknown or when the manifest has no upstream block. The UI marks the
+	// card stale when UpstreamVersion != Version.
+	Upstream        *UpstreamRef `json:"upstream,omitempty"`
+	UpstreamVersion string       `json:"upstream_version,omitempty"`
+	UpstreamURL     string       `json:"upstream_url,omitempty"`
 }
 
 type Catalog struct {
@@ -71,7 +89,22 @@ var (
 	catalogStamp   time.Time
 
 	installMu sync.Mutex
+
+	// Upstream-version lookups have a separate (longer) cache than the
+	// catalog itself. The catalog refreshes every 10 minutes, but upstream
+	// versions change much more slowly and each lookup is its own GitHub API
+	// call; caching them for 6 hours keeps us well under the unauthenticated
+	// 60/hr budget even when the user hammers Refresh.
+	upstreamCacheMu  sync.Mutex
+	upstreamCache    = map[string]upstreamCacheEntry{}
+	upstreamCacheTTL = 6 * time.Hour
 )
+
+type upstreamCacheEntry struct {
+	Version string
+	URL     string
+	At      time.Time
+}
 
 // modelToAssetGroup maps the KOBRA_MODEL_CODE that tools.sh exposes to the
 // SWU asset suffix the Rinkhals.Apps release uses. Models without an
@@ -176,6 +209,62 @@ func fetchManifest(appName string) (*AppManifest, error) {
 	return &m, nil
 }
 
+// resolveUpstream returns the live upstream version + a human-readable URL,
+// using a 6-hour cache per (type|repo|branch) key. Network errors and unknown
+// types return empty strings rather than failing the whole catalog rebuild -
+// staleness data is a nice-to-have, not a blocker.
+func resolveUpstream(u *UpstreamRef) (version, url string) {
+	if u == nil || u.Type == "" || u.Repo == "" {
+		return "", ""
+	}
+	branch := u.Branch
+	if branch == "" {
+		branch = "master"
+	}
+	key := u.Type + "|" + u.Repo + "|" + branch
+
+	upstreamCacheMu.Lock()
+	hit, ok := upstreamCache[key]
+	upstreamCacheMu.Unlock()
+	if ok && time.Since(hit.At) < upstreamCacheTTL {
+		return hit.Version, hit.URL
+	}
+
+	switch u.Type {
+	case "github-release":
+		var rel struct {
+			TagName string `json:"tag_name"`
+			HTMLURL string `json:"html_url"`
+		}
+		if err := httpGetJSON("https://api.github.com/repos/"+u.Repo+"/releases/latest", &rel); err == nil {
+			v := rel.TagName
+			if u.StripPrefix != "" && strings.HasPrefix(v, u.StripPrefix) {
+				v = v[len(u.StripPrefix):]
+			}
+			version, url = v, rel.HTMLURL
+		}
+	case "github-branch-head":
+		var c struct {
+			SHA     string `json:"sha"`
+			HTMLURL string `json:"html_url"`
+		}
+		if err := httpGetJSON("https://api.github.com/repos/"+u.Repo+"/commits/"+branch, &c); err == nil {
+			short := c.SHA
+			if len(short) > 8 {
+				short = short[:8]
+			}
+			version, url = short, c.HTMLURL
+		}
+	default:
+		// Unknown type: leave both empty so the UI shows nothing.
+	}
+
+	upstreamCacheMu.Lock()
+	upstreamCache[key] = upstreamCacheEntry{Version: version, URL: url, At: time.Now()}
+	upstreamCacheMu.Unlock()
+	return version, url
+}
+
 // rebuildCatalog is the slow path: list app dirs, fetch each manifest, fetch
 // the latest release, fuse everything together, and return it. Safe to call
 // concurrently with reads via the mutex.
@@ -240,6 +329,7 @@ func rebuildCatalog() (*Catalog, error) {
 			Description:  m.Description,
 			Version:      m.AppVersion,
 			Requirements: m.Requirements,
+			Upstream:     m.Upstream,
 		}
 		if asset, ok := assetByApp[e.Name]; ok {
 			entry.AvailableForModel = true
@@ -249,6 +339,9 @@ func rebuildCatalog() (*Catalog, error) {
 		if v, ok := installed[e.Name]; ok {
 			entry.Installed = true
 			entry.InstalledVersion = v
+		}
+		if m.Upstream != nil {
+			entry.UpstreamVersion, entry.UpstreamURL = resolveUpstream(m.Upstream)
 		}
 		apps = append(apps, entry)
 	}
