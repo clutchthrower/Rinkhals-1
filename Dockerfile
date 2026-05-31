@@ -105,7 +105,7 @@ RUN npm run build
 ###############################################################
 # build-monitor-backend builds the Go backend
 FROM golang:1.24-alpine AS build-monitor-backend
-COPY ./files/4-apps/home/rinkhals/apps/60-rinkhals-monitor /app
+COPY ./files/4-apps/home/rinkhals/apps/65-rinkhals-monitor /app
 COPY --from=build-monitor-ui /web-portal/build /app/ui
 WORKDIR /app
 RUN apk update && apk add upx
@@ -213,14 +213,14 @@ COPY ./build/prepare-bundle.sh /build/
 # Clean up rinkhals-monitor sources from the merged bundle and inject the
 # built Svelte UI + Go backend in their place. Must run before prepare-bundle.sh
 # so the rename/patches passes see the final artifacts.
-RUN rm -rf /bundle/rinkhals/home/rinkhals/apps/60-rinkhals-monitor/ui/* \
-    && rm -f /bundle/rinkhals/home/rinkhals/apps/60-rinkhals-monitor/*.go \
-    && rm -f /bundle/rinkhals/home/rinkhals/apps/60-rinkhals-monitor/go.* \
-    && rm -f /bundle/rinkhals/home/rinkhals/apps/60-rinkhals-monitor/update-layout.js \
-    && rm -f /bundle/rinkhals/home/rinkhals/apps/60-rinkhals-monitor/rinkhals-monitor
-COPY --from=build-monitor-ui /web-portal/build/ /bundle/rinkhals/home/rinkhals/apps/60-rinkhals-monitor/ui/
-COPY --from=build-monitor-backend /app/rinkhals-monitor /bundle/rinkhals/home/rinkhals/apps/60-rinkhals-monitor/rinkhals-monitor
-RUN chmod +x /bundle/rinkhals/home/rinkhals/apps/60-rinkhals-monitor/rinkhals-monitor
+RUN rm -rf /bundle/rinkhals/home/rinkhals/apps/65-rinkhals-monitor/ui/* \
+    && rm -f /bundle/rinkhals/home/rinkhals/apps/65-rinkhals-monitor/*.go \
+    && rm -f /bundle/rinkhals/home/rinkhals/apps/65-rinkhals-monitor/go.* \
+    && rm -f /bundle/rinkhals/home/rinkhals/apps/65-rinkhals-monitor/update-layout.js \
+    && rm -f /bundle/rinkhals/home/rinkhals/apps/65-rinkhals-monitor/rinkhals-monitor
+COPY --from=build-monitor-ui /web-portal/build/ /bundle/rinkhals/home/rinkhals/apps/65-rinkhals-monitor/ui/
+COPY --from=build-monitor-backend /app/rinkhals-monitor /bundle/rinkhals/home/rinkhals/apps/65-rinkhals-monitor/rinkhals-monitor
+RUN chmod +x /bundle/rinkhals/home/rinkhals/apps/65-rinkhals-monitor/rinkhals-monitor
 ARG version="dev"
 RUN /build/prepare-bundle.sh /bundle "$version"
 
