@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount, onDestroy } from "svelte";
 	import QRCode from "qrcode";
+	import ReportField from "$lib/ReportField.svelte";
 	import {
 		Boxes,
 		Play,
@@ -1033,6 +1034,12 @@
 										<option value={opt}>{opt}</option>
 									{/each}
 								</select>
+							{:else if prop.type === "report"}
+								<!-- A "report" property is read-only structured output written by
+								     the app's daemon (e.g. Tailscale publishes its connection state
+								     here). The value is a JSON-encoded string; we parse it and let
+								     the renderer pick what to show. -->
+								<ReportField value={prop.value} appId={app.id} />
 							{:else if prop.type === "qr"}
 								<!-- A "qr" property is read-only output written by the app's daemon
 								     (e.g. Tailscale login URL, OctoEverywhere link). We render the
