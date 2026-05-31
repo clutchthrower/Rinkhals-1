@@ -404,6 +404,9 @@ func startWebServer() {
 	mux.HandleFunc("/api/auth/change", handleAuthChange)
 	mux.HandleFunc("/api/apps", handleAppsList)
 	mux.HandleFunc("/api/apps/", handleApp)
+	mux.HandleFunc("/api/catalog", handleCatalog)
+	mux.HandleFunc("/api/catalog/refresh", handleCatalogRefresh)
+	mux.HandleFunc("/api/catalog/", handleCatalogInstall)
 
 	mux.Handle("/", http.FileServer(http.FS(uiFS)))
 

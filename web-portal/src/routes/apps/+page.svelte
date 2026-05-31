@@ -12,7 +12,12 @@
 		X,
 		RotateCcw,
 		Loader2,
-		AlertCircle
+		AlertCircle,
+		Download,
+		CheckCircle2,
+		RefreshCw,
+		Package,
+		ExternalLink
 	} from "lucide-svelte";
 
 	type Property = {
@@ -37,15 +42,46 @@
 		properties: Property[];
 	};
 
+	type CatalogApp = {
+		id: string;
+		name: string;
+		description: string;
+		version: string;
+		requirements?: { memory?: number; cpu?: number };
+		depends?: string[];
+		available_for_model: boolean;
+		download_url?: string;
+		asset_size?: number;
+		installed: boolean;
+		installed_version?: string;
+	};
+
+	type Catalog = {
+		release: string;
+		fetched_at: string;
+		model: string;
+		asset_group: string;
+		apps: CatalogApp[];
+		notice?: string;
+	};
+
 	const apiHost = import.meta.env.DEV ? "http://localhost:8080" : "";
+
+	let tab = $state<"installed" | "catalog">("installed");
 
 	let apps = $state<App[]>([]);
 	let loading = $state(true);
 	let error = $state("");
 
+	let catalog = $state<Catalog | null>(null);
+	let catalogLoading = $state(false);
+	let catalogError = $state("");
+	let installingId = $state<string | null>(null);
+
 	let searchQuery = $state("");
 	let stateFilter = $state<"all" | "enabled" | "disabled" | "running">("all");
 	let sourceFilter = $state<"all" | "system" | "user">("all");
+	let catalogSearch = $state("");
 
 	let busyApps = $state<Set<string>>(new Set());
 	let configureApp = $state<App | null>(null);
@@ -69,8 +105,43 @@
 		}
 	}
 
+	async function fetchCatalog(force = false) {
+		catalogLoading = true;
+		try {
+			const url = `${apiHost}/api/catalog${force ? "?refresh=1" : ""}`;
+			const res = await fetch(url);
+			if (!res.ok) throw new Error(`HTTP ${res.status}`);
+			catalog = await res.json();
+			catalogError = "";
+		} catch (e: any) {
+			catalogError = e.message || String(e);
+		} finally {
+			catalogLoading = false;
+		}
+	}
+
+	async function installCatalogApp(entry: CatalogApp) {
+		if (!entry.available_for_model || !entry.download_url) return;
+		installingId = entry.id;
+		try {
+			const res = await fetch(`${apiHost}/api/catalog/${entry.id}/install`, { method: "POST" });
+			const data = await res.json().catch(() => ({}));
+			if (!res.ok || data.success === false) {
+				throw new Error(data.output || `HTTP ${res.status}`);
+			}
+			showToast(`${entry.name} installed`);
+			// Refresh both lists since a new app should now show under Installed.
+			await Promise.all([fetchApps(), fetchCatalog(true)]);
+		} catch (e: any) {
+			showToast(e.message || "Install failed", "err");
+		} finally {
+			installingId = null;
+		}
+	}
+
 	onMount(() => {
 		fetchApps();
+		fetchCatalog(false);
 		pollHandle = setInterval(fetchApps, 5000);
 	});
 
@@ -212,6 +283,41 @@
 		}
 	}
 
+	let visibleCatalog = $derived(
+		(catalog?.apps ?? []).filter((a) => {
+			if (!catalogSearch) return true;
+			const q = catalogSearch.toLowerCase();
+			return (
+				a.id.toLowerCase().includes(q) ||
+				a.name.toLowerCase().includes(q) ||
+				(a.description || "").toLowerCase().includes(q)
+			);
+		})
+	);
+
+	function formatSize(bytes?: number): string {
+		if (!bytes || bytes <= 0) return "";
+		if (bytes < 1024) return `${bytes} B`;
+		if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+		return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+	}
+
+	function relativeTime(iso?: string): string {
+		if (!iso) return "";
+		try {
+			const then = new Date(iso).getTime();
+			const diffMs = Date.now() - then;
+			const m = Math.floor(diffMs / 60000);
+			if (m < 1) return "just now";
+			if (m < 60) return `${m}m ago`;
+			const h = Math.floor(m / 60);
+			if (h < 24) return `${h}h ago`;
+			return `${Math.floor(h / 24)}d ago`;
+		} catch {
+			return "";
+		}
+	}
+
 	let visibleApps = $derived(
 		apps.filter((a) => {
 			if (searchQuery) {
@@ -257,45 +363,119 @@
 </svelte:head>
 
 <div class="space-y-6 max-w-7xl mx-auto w-full">
-	<header class="flex flex-col xl:flex-row xl:items-end xl:justify-between gap-4 pb-4 border-b border-line-soft">
-		<div>
-			<p class="text-xs uppercase tracking-wider text-ink-faint font-medium">Apps</p>
-			<h2 class="text-3xl font-semibold text-ink mt-1 tracking-tight flex items-center gap-2">
-				<Boxes size={26} class="text-brand" />
-				Installed apps
-			</h2>
-			<p class="text-ink-muted text-sm mt-2">Enable, start and configure the apps shipped with Rinkhals.</p>
-		</div>
-		<div class="flex flex-wrap items-center gap-2">
-			<div class="relative">
-				<Search class="absolute left-3 top-1/2 -translate-y-1/2 text-ink-faint" size={15} />
-				<input
-					bind:value={searchQuery}
-					type="text"
-					placeholder="Search..."
-					class="bg-canvas text-ink rounded-lg pl-9 pr-3 py-2 border border-line-soft focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 text-sm w-52"
-				/>
+	<header class="pb-4 border-b border-line-soft space-y-4">
+		<div class="flex flex-col xl:flex-row xl:items-end xl:justify-between gap-4">
+			<div>
+				<p class="text-xs uppercase tracking-wider text-ink-faint font-medium">Apps</p>
+				<h2 class="text-3xl font-semibold text-ink mt-1 tracking-tight flex items-center gap-2">
+					<Boxes size={26} class="text-brand" />
+					{tab === "installed" ? "Installed apps" : "Browse catalog"}
+				</h2>
+				<p class="text-ink-muted text-sm mt-2">
+					{tab === "installed"
+						? "Enable, start and configure the apps shipped with Rinkhals."
+						: "Discover and install community apps from Rinkhals.Apps."}
+				</p>
 			</div>
-			<select
-				bind:value={stateFilter}
-				class="bg-canvas text-ink border border-line-soft rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
-			>
-				<option value="all">All states</option>
-				<option value="enabled">Enabled</option>
-				<option value="disabled">Disabled</option>
-				<option value="running">Running</option>
-			</select>
-			<select
-				bind:value={sourceFilter}
-				class="bg-canvas text-ink border border-line-soft rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
-			>
-				<option value="all">All sources</option>
-				<option value="system">System</option>
-				<option value="user">User</option>
-			</select>
+
+			<!-- Tab toggle + filters -->
+			<div class="flex flex-wrap items-center gap-2">
+				<div class="inline-flex bg-surface border border-line-soft rounded-lg p-0.5">
+					<button
+						type="button"
+						onclick={() => (tab = "installed")}
+						class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors {tab === 'installed' ? 'bg-canvas text-brand shadow-sm' : 'text-ink-muted hover:text-ink'}"
+					>
+						Installed
+					</button>
+					<button
+						type="button"
+						onclick={() => (tab = "catalog")}
+						class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors {tab === 'catalog' ? 'bg-canvas text-brand shadow-sm' : 'text-ink-muted hover:text-ink'}"
+					>
+						Catalog
+					</button>
+				</div>
+
+				{#if tab === "installed"}
+					<div class="relative">
+						<Search class="absolute left-3 top-1/2 -translate-y-1/2 text-ink-faint" size={15} />
+						<input
+							bind:value={searchQuery}
+							type="text"
+							placeholder="Search..."
+							class="bg-canvas text-ink rounded-lg pl-9 pr-3 py-2 border border-line-soft focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 text-sm w-44"
+						/>
+					</div>
+					<select
+						bind:value={stateFilter}
+						class="bg-canvas text-ink border border-line-soft rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
+					>
+						<option value="all">All states</option>
+						<option value="enabled">Enabled</option>
+						<option value="disabled">Disabled</option>
+						<option value="running">Running</option>
+					</select>
+					<select
+						bind:value={sourceFilter}
+						class="bg-canvas text-ink border border-line-soft rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
+					>
+						<option value="all">All sources</option>
+						<option value="system">System</option>
+						<option value="user">User</option>
+					</select>
+				{:else}
+					<div class="relative">
+						<Search class="absolute left-3 top-1/2 -translate-y-1/2 text-ink-faint" size={15} />
+						<input
+							bind:value={catalogSearch}
+							type="text"
+							placeholder="Search catalog..."
+							class="bg-canvas text-ink rounded-lg pl-9 pr-3 py-2 border border-line-soft focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 text-sm w-52"
+						/>
+					</div>
+					<button
+						type="button"
+						onclick={() => fetchCatalog(true)}
+						disabled={catalogLoading}
+						class="flex items-center gap-1.5 px-3 py-2 bg-canvas hover:bg-surface-warm border border-line-soft rounded-lg text-sm text-ink-2 disabled:opacity-50 transition-colors"
+					>
+						{#if catalogLoading}
+							<Loader2 size={14} class="animate-spin" />
+						{:else}
+							<RefreshCw size={14} />
+						{/if}
+						Refresh
+					</button>
+				{/if}
+			</div>
 		</div>
+
+		{#if tab === "catalog" && catalog}
+			<div class="flex flex-wrap items-center gap-3 text-[11px] text-ink-faint">
+				<span class="inline-flex items-center gap-1">
+					<Package size={12} /> Release <span class="font-mono text-ink-muted">{catalog.release || "(unknown)"}</span>
+				</span>
+				<span>Printer: <span class="font-mono text-ink-muted">{catalog.model || "(unknown)"}</span></span>
+				{#if catalog.asset_group}
+					<span>SWU group: <span class="font-mono text-ink-muted">{catalog.asset_group}</span></span>
+				{/if}
+				{#if catalog.fetched_at}
+					<span>Fetched {relativeTime(catalog.fetched_at)}</span>
+				{/if}
+				<a
+					href="https://github.com/rinkhals-community/Rinkhals.Apps"
+					target="_blank"
+					rel="noopener noreferrer"
+					class="inline-flex items-center gap-1 text-brand hover:underline ml-auto"
+				>
+					Source <ExternalLink size={11} />
+				</a>
+			</div>
+		{/if}
 	</header>
 
+	{#if tab === "installed"}
 	{#if error}
 		<div class="bg-surface-accent border border-coral/40 rounded-xl px-4 py-3 text-coral text-sm flex items-center gap-2">
 			<AlertCircle size={16} />
@@ -409,6 +589,117 @@
 				</div>
 			{/each}
 		</div>
+	{/if}
+	{:else}
+		<!-- Catalog tab -->
+		{#if catalogError}
+			<div class="bg-surface-accent border border-coral/40 rounded-xl px-4 py-3 text-coral text-sm flex items-center gap-2">
+				<AlertCircle size={16} />
+				{catalogError}
+			</div>
+		{/if}
+
+		{#if catalog?.notice}
+			<div class="bg-surface-warm border border-accent/30 rounded-xl px-4 py-3 text-accent-hover text-sm flex items-center gap-2">
+				<AlertCircle size={16} />
+				{catalog.notice}
+			</div>
+		{/if}
+
+		{#if catalogLoading && !catalog}
+			<div class="text-ink-faint animate-pulse">Loading catalog from Rinkhals.Apps...</div>
+		{:else if !catalog || visibleCatalog.length === 0}
+			<div class="text-ink-faint italic">No catalog entries match.</div>
+		{:else}
+			<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+				{#each visibleCatalog as entry (entry.id)}
+					{@const installing = installingId === entry.id}
+					{@const upgradeAvailable = entry.installed && entry.installed_version && entry.version && entry.installed_version !== entry.version}
+					<div class="bg-canvas border border-line-soft rounded-xl p-5 flex flex-col gap-3 hover:border-brand/40 transition-colors">
+						<div class="flex items-start justify-between gap-3">
+							<div class="min-w-0">
+								<div class="flex items-center gap-2 flex-wrap">
+									<h3 class="text-base font-semibold text-ink truncate">{entry.name}</h3>
+									{#if entry.version}
+										<span class="text-[11px] text-ink-faint font-mono">v{entry.version}</span>
+									{/if}
+								</div>
+								<p class="text-[11px] text-ink-faint font-mono mt-0.5">{entry.id}</p>
+							</div>
+							{#if entry.installed && !upgradeAvailable}
+								<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-brand-soft text-brand text-[11px] font-semibold border border-brand/30">
+									<CheckCircle2 size={11} />
+									Installed
+								</span>
+							{:else if upgradeAvailable}
+								<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-warm text-accent-hover text-[11px] font-semibold border border-accent/30">
+									v{entry.installed_version} -&gt; v{entry.version}
+								</span>
+							{/if}
+						</div>
+
+						{#if entry.description}
+							<p class="text-sm text-ink-muted line-clamp-3">{entry.description}</p>
+						{/if}
+
+						<div class="flex items-center gap-3 flex-wrap text-[11px] text-ink-faint">
+							{#if entry.requirements?.memory}
+								<span class="inline-flex items-center gap-1"><HardDrive size={11} /> {entry.requirements.memory} MB</span>
+							{/if}
+							{#if entry.requirements?.cpu}
+								<span class="inline-flex items-center gap-1"><Cpu size={11} /> {entry.requirements.cpu}%</span>
+							{/if}
+							{#if entry.asset_size}
+								<span class="inline-flex items-center gap-1"><Download size={11} /> {formatSize(entry.asset_size)}</span>
+							{/if}
+						</div>
+
+						<div class="flex items-center gap-2 mt-auto pt-3 border-t border-line-soft">
+							{#if !entry.available_for_model}
+								<span class="text-[11px] text-ink-faint italic">No SWU for this printer</span>
+							{:else if entry.installed && !upgradeAvailable}
+								<button
+									type="button"
+									onclick={() => installCatalogApp(entry)}
+									disabled={installing}
+									class="flex items-center gap-1.5 px-2.5 py-1.5 bg-surface hover:bg-surface-warm border border-line-soft rounded-lg text-xs font-medium text-ink-2 disabled:opacity-50 transition-colors"
+								>
+									{#if installing}
+										<Loader2 size={13} class="animate-spin" /> Reinstalling...
+									{:else}
+										<RotateCw size={13} /> Reinstall
+									{/if}
+								</button>
+							{:else}
+								<button
+									type="button"
+									onclick={() => installCatalogApp(entry)}
+									disabled={installing}
+									class="flex items-center gap-1.5 px-2.5 py-1.5 bg-brand hover:bg-brand-hover text-white rounded-lg text-xs font-medium disabled:opacity-50 transition-colors"
+								>
+									{#if installing}
+										<Loader2 size={13} class="animate-spin" /> Installing...
+									{:else}
+										<Download size={13} /> {upgradeAvailable ? "Upgrade" : "Install"}
+									{/if}
+								</button>
+							{/if}
+							{#if entry.download_url}
+								<a
+									href={entry.download_url}
+									target="_blank"
+									rel="noopener noreferrer"
+									class="ml-auto text-[11px] text-ink-faint hover:text-brand inline-flex items-center gap-1"
+									title="Download SWU directly"
+								>
+									SWU <ExternalLink size={11} />
+								</a>
+							{/if}
+						</div>
+					</div>
+				{/each}
+			</div>
+		{/if}
 	{/if}
 </div>
 
