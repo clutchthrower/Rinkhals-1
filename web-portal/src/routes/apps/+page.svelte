@@ -113,6 +113,55 @@
 	let uninstallTarget = $state<App | null>(null);
 	let uninstallRunning = $state(false);
 	let configureApp = $state<App | null>(null);
+
+	// Per-card description expansion. We only show the "Show more" affordance
+	// when the description is actually overflowing its clamp, measured at
+	// runtime so the threshold is correct regardless of viewport width or
+	// font size. Card ids are unique across both tabs (installed app id ==
+	// catalog app id for the same app), so a single Map works for both.
+	let truncatedDescs = $state<Set<string>>(new Set());
+	let expandedDescs = $state<Set<string>>(new Set());
+
+	function toggleDesc(id: string) {
+		const next = new Set(expandedDescs);
+		if (next.has(id)) next.delete(id);
+		else next.add(id);
+		expandedDescs = next;
+	}
+
+	// Svelte action: measures whether the clamped description is overflowing
+	// and adds the id to truncatedDescs if so. Re-checks on viewport resize.
+	// Skipped while the card is expanded (no clamp -> would always look like
+	// it fits, which would hide the toggle button mid-interaction).
+	function descAction(node: HTMLElement, currentId: string) {
+		let id = currentId;
+		const check = () => {
+			requestAnimationFrame(() => {
+				if (expandedDescs.has(id)) return;
+				const overflows = node.scrollHeight > node.clientHeight + 1;
+				const has = truncatedDescs.has(id);
+				if (overflows && !has) {
+					truncatedDescs = new Set([...truncatedDescs, id]);
+				} else if (!overflows && has) {
+					const next = new Set(truncatedDescs);
+					next.delete(id);
+					truncatedDescs = next;
+				}
+			});
+		};
+		check();
+		const ro = new ResizeObserver(check);
+		ro.observe(node);
+		return {
+			update(newId: string) {
+				id = newId;
+				check();
+			},
+			destroy() {
+				ro.disconnect();
+			}
+		};
+	}
 	let pendingConfig = $state<Record<string, string>>({});
 	let configSaving = $state(false);
 	let toast = $state<{ text: string; tone: "ok" | "err" } | null>(null);
@@ -622,7 +671,21 @@
 					</div>
 
 					{#if app.description}
-						<p class="text-sm text-ink-muted line-clamp-2">{app.description}</p>
+						<div>
+							<p
+								use:descAction={app.id}
+								class="text-sm text-ink-muted {expandedDescs.has(app.id) ? '' : 'line-clamp-2'}"
+							>{app.description}</p>
+							{#if truncatedDescs.has(app.id) || expandedDescs.has(app.id)}
+								<button
+									type="button"
+									onclick={() => toggleDesc(app.id)}
+									class="text-[11px] text-brand hover:underline mt-0.5"
+								>
+									{expandedDescs.has(app.id) ? 'Show less' : 'Show more'}
+								</button>
+							{/if}
+						</div>
 					{/if}
 
 					<div class="flex items-center gap-2 flex-wrap">
@@ -752,7 +815,21 @@
 						</div>
 
 						{#if entry.description}
-							<p class="text-sm text-ink-muted line-clamp-3">{entry.description}</p>
+							<div>
+								<p
+									use:descAction={entry.id}
+									class="text-sm text-ink-muted {expandedDescs.has(entry.id) ? '' : 'line-clamp-3'}"
+								>{entry.description}</p>
+								{#if truncatedDescs.has(entry.id) || expandedDescs.has(entry.id)}
+									<button
+										type="button"
+										onclick={() => toggleDesc(entry.id)}
+										class="text-[11px] text-brand hover:underline mt-0.5"
+									>
+										{expandedDescs.has(entry.id) ? 'Show less' : 'Show more'}
+									</button>
+								{/if}
+							</div>
 						{/if}
 
 						<div class="flex items-center gap-3 flex-wrap text-[11px] text-ink-faint">
