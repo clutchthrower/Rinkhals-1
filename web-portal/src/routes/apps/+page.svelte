@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount, onDestroy } from "svelte";
+	import QRCode from "qrcode";
 	import {
 		Boxes,
 		Play,
@@ -19,7 +20,9 @@
 		Package,
 		ExternalLink,
 		Trash2,
-		AlertTriangle
+		AlertTriangle,
+		Copy,
+		Check
 	} from "lucide-svelte";
 
 	type Property = {
@@ -121,6 +124,41 @@
 	// catalog app id for the same app), so a single Map works for both.
 	let truncatedDescs = $state<Set<string>>(new Set());
 	let expandedDescs = $state<Set<string>>(new Set());
+
+	// Render a URL into a canvas as a QR code. The action re-renders whenever
+	// the URL parameter changes, so polling /api/apps and seeing the property
+	// value update automatically refreshes the displayed QR without any
+	// manual coordination from the caller.
+	function qrCanvas(node: HTMLCanvasElement, url: string) {
+		const render = (value: string) => {
+			if (!value) return;
+			QRCode.toCanvas(node, value, {
+				margin: 1,
+				width: 220,
+				color: { dark: "#1a1a1a", light: "#ffffff" },
+				errorCorrectionLevel: "M"
+			}).catch((e) => console.error("QR render failed", e));
+		};
+		render(url);
+		return {
+			update(newUrl: string) {
+				render(newUrl);
+			}
+		};
+	}
+
+	let copiedKey = $state<string | null>(null);
+	async function copyToClipboard(key: string, text: string) {
+		try {
+			await navigator.clipboard.writeText(text);
+			copiedKey = key;
+			setTimeout(() => {
+				if (copiedKey === key) copiedKey = null;
+			}, 1500);
+		} catch (e) {
+			showToast("Copy failed", "err");
+		}
+	}
 
 	function toggleDesc(id: string) {
 		const next = new Set(expandedDescs);
@@ -995,6 +1033,54 @@
 										<option value={opt}>{opt}</option>
 									{/each}
 								</select>
+							{:else if prop.type === "qr"}
+								<!-- A "qr" property is read-only output written by the app's daemon
+								     (e.g. Tailscale login URL, OctoEverywhere link). We render the
+								     URL as a scannable QR code with the raw URL as a fallback. -->
+								{#if prop.value}
+									<div class="bg-surface border border-line-soft rounded-xl p-4 flex flex-col items-center gap-3">
+										<canvas use:qrCanvas={prop.value} class="rounded-md bg-white"></canvas>
+										<p class="text-[11px] text-ink-muted text-center">Scan with your phone, or open the URL below.</p>
+										<div class="w-full flex items-stretch gap-1.5">
+											<a
+												href={prop.value}
+												target="_blank"
+												rel="noopener noreferrer"
+												class="flex-1 min-w-0 px-2.5 py-1.5 bg-canvas border border-line-soft rounded-md text-[11px] font-mono text-brand hover:bg-brand-soft transition-colors truncate"
+												title={prop.value}
+											>
+												{prop.value}
+											</a>
+											<button
+												type="button"
+												onclick={() => copyToClipboard(prop.key, prop.value)}
+												class="shrink-0 px-2 py-1.5 bg-canvas hover:bg-surface-warm border border-line-soft rounded-md text-ink-muted hover:text-ink transition-colors"
+												title="Copy URL"
+												aria-label="Copy URL"
+											>
+												{#if copiedKey === prop.key}
+													<Check size={13} class="text-brand" />
+												{:else}
+													<Copy size={13} />
+												{/if}
+											</button>
+										</div>
+										<p class="text-[11px] text-ink-faint text-center">
+											URLs from the app may expire. If scanning fails, restart the app from its card to get a fresh code.
+										</p>
+									</div>
+								{:else if app.running}
+									<div class="bg-surface border border-line-soft rounded-xl p-4 text-center">
+										<Loader2 size={22} class="text-brand animate-spin mx-auto mb-2" />
+										<p class="text-sm text-ink">Waiting for the app to publish its login URL...</p>
+										<p class="text-[11px] text-ink-faint mt-1">This usually takes a few seconds after startup.</p>
+									</div>
+								{:else}
+									<div class="bg-surface-warm border border-accent/30 rounded-xl p-4 text-center text-ink-2">
+										<p class="text-sm">Start the app to receive a login URL.</p>
+										<p class="text-[11px] text-ink-muted mt-1">The daemon needs to be running to generate it.</p>
+									</div>
+								{/if}
 							{:else}
 								<input
 									id="prop-{prop.key}"

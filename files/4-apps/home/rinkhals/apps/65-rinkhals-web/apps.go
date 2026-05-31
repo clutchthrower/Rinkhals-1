@@ -128,11 +128,12 @@ func readManifest(root string) (*AppManifest, error) {
 	return &m, nil
 }
 
-// readUserConfig returns the persisted user overrides for an app (the JSON
-// blob written by set_app_property). Returns empty map if absent.
-func readUserConfig(id string) map[string]string {
+// readConfigFile parses the JSON config blob at path and returns it as a
+// flat string map. Missing/unreadable/malformed files return an empty map -
+// callers shouldn't see errors here, only the absence of values.
+func readConfigFile(path string) map[string]string {
 	out := map[string]string{}
-	data, err := os.ReadFile(filepath.Join(userAppPath, id+".config"))
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return out
 	}
@@ -147,6 +148,24 @@ func readUserConfig(id string) map[string]string {
 		out[k] = fmt.Sprint(v)
 	}
 	return out
+}
+
+// readUserConfig returns persistent user overrides (the JSON written by
+// set_app_property under USER_APP_PATH/<id>.config). The UI marks anything
+// found here as "overridden" so the user knows they've changed it from the
+// default.
+func readUserConfig(id string) map[string]string {
+	return readConfigFile(filepath.Join(userAppPath, id+".config"))
+}
+
+// readTempConfig returns runtime values an app has written back to itself
+// via set_temporary_app_property (under TEMPORARY_APP_PATH/<id>.config). This
+// is how apps publish output that needs to surface in the UI (e.g. Tailscale
+// writes its login URL into account_login here, OctoEverywhere writes the
+// link URL into printer_link). These values are not user overrides - they're
+// the app's own runtime state.
+func readTempConfig(id string) map[string]string {
+	return readConfigFile(filepath.Join(temporaryAppPath, id+".config"))
 }
 
 // queryAppStates runs a single shell invocation that emits a line per app
@@ -195,10 +214,16 @@ func queryAppStates(ids []string) map[string]struct {
 	return result
 }
 
-// buildProperties merges app.json's property declarations with the
-// persisted user overrides, picking the effective value and marking which
-// keys are overridden.
-func buildProperties(manifest *AppManifest, userCfg map[string]string) []AppProperty {
+// buildProperties merges app.json's property declarations with the persisted
+// user overrides AND the temporary runtime values, picking the effective value
+// with the same precedence tools.sh's get_app_property uses:
+//
+//	temp (runtime) > user (persistent) > default
+//
+// Only persistent user overrides set Overridden=true. A value sourced from the
+// temp config is just runtime state (e.g. Tailscale writing its login URL into
+// account_login) and shouldn't be labelled "user override".
+func buildProperties(manifest *AppManifest, userCfg, tempCfg map[string]string) []AppProperty {
 	if manifest == nil || len(manifest.Properties) == 0 {
 		return []AppProperty{}
 	}
@@ -224,8 +249,10 @@ func buildProperties(manifest *AppManifest, userCfg map[string]string) []AppProp
 		if v, ok := raw["advanced"].(bool); ok {
 			p.Advanced = v
 		}
-		if override, has := userCfg[key]; has {
-			p.Value = override
+		if v, has := tempCfg[key]; has && v != "" {
+			p.Value = v // runtime value from /tmp; not flagged as overridden
+		} else if v, has := userCfg[key]; has {
+			p.Value = v
 			p.Overridden = true
 		} else {
 			p.Value = p.Default
@@ -239,12 +266,20 @@ func buildProperties(manifest *AppManifest, userCfg map[string]string) []AppProp
 // appNeedsConfiguration reports whether an app has at least one *user-facing*
 // property with no default. Apps like that should be configured before they
 // are enabled; apps whose user-facing properties all have sensible defaults
-// (or are advanced-only) are safe to auto-enable. Advanced properties don't
-// count, since they're hidden behind an opt-in toggle and shouldn't gate the
-// install flow.
+// (or are advanced/output-only) are safe to auto-enable. The following
+// property kinds don't count toward the gate:
+//
+//   - Advanced properties: hidden behind an opt-in toggle.
+//   - "qr" type properties: these are output values that the app writes back
+//     into its own config (e.g. Tailscale's account_login URL, OctoEverywhere's
+//     printer_link). The user can't supply them ahead of time, so they should
+//     never block install. The portal renders them as QR codes when present.
 func appNeedsConfiguration(manifest *AppManifest) bool {
-	for _, p := range buildProperties(manifest, nil) {
+	for _, p := range buildProperties(manifest, nil, nil) {
 		if p.Advanced {
+			continue
+		}
+		if p.Type == "qr" {
 			continue
 		}
 		if strings.TrimSpace(p.Default) == "" {
@@ -273,7 +308,8 @@ func loadApp(id string, state map[string]struct {
 	}
 
 	userCfg := readUserConfig(id)
-	props := buildProperties(manifest, userCfg)
+	tempCfg := readTempConfig(id)
+	props := buildProperties(manifest, userCfg, tempCfg)
 
 	s := state[id]
 	return &App{
