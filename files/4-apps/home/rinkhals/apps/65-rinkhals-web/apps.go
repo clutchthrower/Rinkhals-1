@@ -224,15 +224,34 @@ func buildProperties(manifest *AppManifest, userCfg map[string]string) []AppProp
 	return props
 }
 
-// loadApp returns the full wire shape for a single ID.
+// appNeedsConfiguration reports whether an app has at least one property the
+// user must supply a value for (a property with no default). Apps like that
+// should be configured before they are enabled; apps whose properties all have
+// sensible defaults (or have no properties) are safe to auto-enable.
+func appNeedsConfiguration(manifest *AppManifest) bool {
+	for _, p := range buildProperties(manifest, nil) {
+		if strings.TrimSpace(p.Default) == "" {
+			return true
+		}
+	}
+	return false
+}
+
+// loadApp returns the full wire shape for a single ID. It returns an error when
+// the app directory doesn't exist (neither user nor builtin), so callers can
+// turn a request for an unknown app into a 404.
 func loadApp(id string, state map[string]struct {
 	Enabled bool
 	Running bool
 }) (*App, error) {
 	root, source := resolveAppRoot(id)
+	if st, err := os.Stat(root); err != nil || !st.IsDir() {
+		return nil, fmt.Errorf("app not found: %s", id)
+	}
 	manifest, err := readManifest(root)
 	if err != nil {
-		// App directory exists but no manifest — surface a stub rather than failing the list.
+		// Directory exists but the manifest is missing/unreadable — surface a
+		// stub rather than 404ing an app that is actually installed.
 		manifest = &AppManifest{Name: id}
 	}
 
@@ -263,6 +282,9 @@ func stringOr(s, fallback string) string {
 // --- HTTP handlers ---
 
 func handleAppsList(w http.ResponseWriter, r *http.Request) {
+	if corsPreflight(w, r, "GET, OPTIONS") {
+		return
+	}
 	writeJSONHeaders(w)
 	if r.Method != "GET" {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -284,6 +306,9 @@ func handleAppsList(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleApp(w http.ResponseWriter, r *http.Request) {
+	if corsPreflight(w, r, "GET, POST, PUT, DELETE, OPTIONS") {
+		return
+	}
 	writeJSONHeaders(w)
 
 	// Parse "/api/apps/{id}[/...]" with the suffix being subresource routing.
@@ -391,6 +416,20 @@ func handleApp(w http.ResponseWriter, r *http.Request) {
 func writeJSONHeaders(w http.ResponseWriter) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Content-Type", "application/json")
+}
+
+// corsPreflight answers a CORS OPTIONS preflight and reports whether it handled
+// the request. On-device the UI is same-origin so this never fires; it exists so
+// PUT/DELETE/POST work from the cross-origin Vite dev server (5173 -> 8080).
+func corsPreflight(w http.ResponseWriter, r *http.Request, methods string) bool {
+	if r.Method != http.MethodOptions {
+		return false
+	}
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", methods)
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+	w.WriteHeader(http.StatusNoContent)
+	return true
 }
 
 func runAppHelper(w http.ResponseWriter, helper, id string) {

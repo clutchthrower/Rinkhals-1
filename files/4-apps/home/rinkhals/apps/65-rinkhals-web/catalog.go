@@ -59,11 +59,18 @@ type Catalog struct {
 	Notice    string       `json:"notice,omitempty"` // surfaced when model has no SWU group mapping
 }
 
-// Cache state.
+// Cache state. catalogDataMu guards the cached pointer and is only ever held
+// briefly; catalogBuildMu serializes the slow network rebuild so concurrent
+// callers don't stampede GitHub. Reads of a fresh cache never block on a
+// rebuild in progress. installMu serializes SWU installs, which share the
+// fixed /useremain/update_swu staging directory inside install_swu.
 var (
-	catalogMu    sync.Mutex
-	catalogData  *Catalog
-	catalogStamp time.Time
+	catalogDataMu  sync.Mutex
+	catalogBuildMu sync.Mutex
+	catalogData    *Catalog
+	catalogStamp   time.Time
+
+	installMu sync.Mutex
 )
 
 // modelToAssetGroup maps the KOBRA_MODEL_CODE that tools.sh exposes to the
@@ -256,30 +263,59 @@ func rebuildCatalog() (*Catalog, error) {
 	}, nil
 }
 
-// getCatalog returns a cached catalog if fresh, otherwise rebuilds.
+// getCatalog returns a cached catalog if fresh, otherwise rebuilds. The rebuild
+// runs without holding the data lock, so a fresh-cache read is never blocked by
+// a slow GitHub fetch; only the rebuild itself is serialized (catalogBuildMu).
 func getCatalog(force bool) (*Catalog, error) {
-	catalogMu.Lock()
-	defer catalogMu.Unlock()
-
-	if !force && catalogData != nil && time.Since(catalogStamp) < catalogCacheTTL {
-		return catalogData, nil
+	// Fast path: serve a fresh cache without touching the build lock.
+	catalogDataMu.Lock()
+	data, stamp := catalogData, catalogStamp
+	catalogDataMu.Unlock()
+	if !force && data != nil && time.Since(stamp) < catalogCacheTTL {
+		return data, nil
 	}
+
+	// Serialize rebuilds. Callers that arrive during a rebuild wait here, then
+	// pick up the fresh result from the re-check below instead of refetching.
+	catalogBuildMu.Lock()
+	defer catalogBuildMu.Unlock()
+
+	catalogDataMu.Lock()
+	data, stamp = catalogData, catalogStamp
+	catalogDataMu.Unlock()
+	if !force && data != nil && time.Since(stamp) < catalogCacheTTL {
+		return data, nil
+	}
+
 	c, err := rebuildCatalog()
 	if err != nil {
-		// If we have a stale cache, return it rather than nothing.
-		if catalogData != nil {
-			return catalogData, err
+		if data != nil {
+			return data, err // stale fallback
 		}
 		return nil, err
 	}
+	catalogDataMu.Lock()
 	catalogData = c
 	catalogStamp = time.Now()
+	catalogDataMu.Unlock()
 	return c, nil
+}
+
+// invalidateCatalog drops the cache so the next read rebuilds (e.g. after an
+// install changes installed state).
+func invalidateCatalog() {
+	catalogDataMu.Lock()
+	catalogData = nil
+	catalogStamp = time.Time{}
+	catalogDataMu.Unlock()
 }
 
 // --- HTTP handlers ---
 
 func handleCatalog(w http.ResponseWriter, r *http.Request) {
+	if corsPreflight(w, r, "GET, OPTIONS") {
+		return
+	}
 	writeJSONHeaders(w)
 	if r.Method != "GET" {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -301,6 +337,9 @@ func handleCatalog(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleCatalogRefresh(w http.ResponseWriter, r *http.Request) {
+	if corsPreflight(w, r, "POST, OPTIONS") {
+		return
+	}
 	writeJSONHeaders(w)
 	if r.Method != "POST" {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -315,9 +354,13 @@ func handleCatalogRefresh(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleCatalogInstall handles POST /api/catalog/{id}/install. Downloads the
-// matching SWU for the current model into /tmp and pipes it through
-// install_swu (the same code path the USB-stick installer uses).
+// matching SWU for the current model to eMMC and pipes it through install_swu
+// (the same code path the USB-stick installer uses). When the freshly installed
+// app needs no configuration, it is enabled and started automatically.
 func handleCatalogInstall(w http.ResponseWriter, r *http.Request) {
+	if corsPreflight(w, r, "POST, OPTIONS") {
+		return
+	}
 	writeJSONHeaders(w)
 	if r.Method != "POST" {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -336,6 +379,15 @@ func handleCatalogInstall(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid app id", http.StatusBadRequest)
 		return
 	}
+
+	// Serialize installs: install_swu wipes and reuses a fixed staging dir
+	// (/useremain/update_swu), so two concurrent installs would corrupt each
+	// other. Reject rather than queue so the caller gets immediate feedback.
+	if !installMu.TryLock() {
+		http.Error(w, "Another install is already in progress", http.StatusConflict)
+		return
+	}
+	defer installMu.Unlock()
 
 	// Find the catalog entry to discover the download URL for this model.
 	c, err := getCatalog(false)
@@ -375,15 +427,37 @@ func handleCatalogInstall(w http.ResponseWriter, r *http.Request) {
 	// USB-stick installer uses, so success here matches what users get today.
 	cmd := fmt.Sprintf(". %s\ninstall_swu %s\n", toolsSh, shellQuote(swuPath))
 	out, err := exec.Command("sh", "-c", cmd).CombinedOutput()
+	installed := err == nil
+
 	resp := map[string]interface{}{
-		"success": err == nil,
-		"output":  string(out),
-		"app":     id,
+		"success":      installed,
+		"output":       string(out),
+		"app":          id,
+		"installed":    installed,
+		"needs_config": false,
+		"auto_enabled": false,
 	}
+
+	if installed {
+		// Decide auto-enable from the freshly installed manifest. Apps whose
+		// properties all have defaults (or that have none) are safe to enable
+		// and start now; apps that need user input are left disabled so they
+		// can be configured first.
+		manifest, _ := readManifest(filepath.Join(userAppPath, id))
+		needsConfig := appNeedsConfiguration(manifest)
+		resp["needs_config"] = needsConfig
+
+		if !needsConfig {
+			q := shellQuote(id)
+			enableCmd := fmt.Sprintf(". %s\nenable_app %s && start_app %s\n", toolsSh, q, q)
+			eout, eerr := exec.Command("sh", "-c", enableCmd).CombinedOutput()
+			resp["auto_enabled"] = eerr == nil
+			resp["enable_output"] = string(eout)
+		}
+	}
+
 	// Bust the catalog cache so a subsequent GET shows "installed: true".
-	catalogMu.Lock()
-	catalogData = nil
-	catalogMu.Unlock()
+	invalidateCatalog()
 	json.NewEncoder(w).Encode(resp)
 }
 

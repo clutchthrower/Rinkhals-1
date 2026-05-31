@@ -129,13 +129,46 @@
 			if (!res.ok || data.success === false) {
 				throw new Error(data.output || `HTTP ${res.status}`);
 			}
-			showToast(`${entry.name} installed`);
-			// Refresh both lists since a new app should now show under Installed.
+			// Refresh installed list first so we can locate the new app below.
 			await Promise.all([fetchApps(), fetchCatalog(true)]);
+
+			if (data.needs_config) {
+				// Left disabled on purpose: open the configure drawer so the user
+				// can set required values, then enable from there.
+				showToast(`${entry.name} installed — configure it, then enable`);
+				tab = "installed";
+				const installed = apps.find((a) => a.id === entry.id);
+				if (installed) openConfigure(installed);
+			} else if (data.auto_enabled) {
+				showToast(`${entry.name} installed and started`);
+			} else {
+				showToast(`${entry.name} installed`);
+			}
 		} catch (e: any) {
 			showToast(e.message || "Install failed", "err");
 		} finally {
 			installingId = null;
+		}
+	}
+
+	// Enable + start an app, optionally saving pending config first. Used by the
+	// configure drawer to complete the "configure then enable" flow for apps that
+	// were installed but left disabled because they needed configuration.
+	async function saveAndEnable(app: App) {
+		if (hasPendingChanges()) {
+			await saveConfig();
+		}
+		try {
+			await callApp(app.id, "/enable", { method: "POST" });
+			await callApp(app.id, "/action", {
+				method: "POST",
+				body: JSON.stringify({ action: "start" })
+			});
+			showToast(`${app.name} enabled and started`);
+			const refreshed = apps.find((a) => a.id === app.id);
+			if (refreshed) configureApp = refreshed;
+		} catch {
+			// callApp already surfaced an error toast
 		}
 	}
 
@@ -738,6 +771,11 @@
 			</div>
 
 			<div class="p-5 space-y-5">
+				{#if !app.enabled}
+					<div class="bg-surface-warm border border-accent/30 rounded-lg px-3 py-2.5 text-[13px] text-accent-hover">
+						This app is installed but disabled. Adjust any settings below, then use <span class="font-medium">Enable app</span> to start it.
+					</div>
+				{/if}
 				{#if app.properties.length === 0}
 					<p class="text-ink-muted text-sm italic">This app has no configurable properties.</p>
 				{:else}
@@ -829,13 +867,24 @@
 						type="button"
 						onclick={saveConfig}
 						disabled={!hasPendingChanges() || configSaving}
-						class="px-3 py-1.5 rounded-lg text-sm font-medium bg-brand hover:bg-brand-hover text-white disabled:opacity-40 flex items-center gap-1.5"
+						class="px-3 py-1.5 rounded-lg text-sm font-medium disabled:opacity-40 flex items-center gap-1.5 {app.enabled ? 'bg-brand hover:bg-brand-hover text-white' : 'bg-surface hover:bg-surface-warm border border-line-soft text-ink'}"
 					>
 						{#if configSaving}
 							<Loader2 size={13} class="animate-spin" />
 						{/if}
 						Save
 					</button>
+					{#if !app.enabled}
+						<button
+							type="button"
+							onclick={() => saveAndEnable(app)}
+							disabled={configSaving}
+							class="px-3 py-1.5 rounded-lg text-sm font-medium bg-brand hover:bg-brand-hover text-white disabled:opacity-40 flex items-center gap-1.5"
+						>
+							<Play size={13} />
+							Enable app
+						</button>
+					{/if}
 				</div>
 			</div>
 		</div>
