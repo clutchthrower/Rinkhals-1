@@ -14,7 +14,7 @@ By using Rinkhals, you will keep all stock Anycubic features (print screen, Anyc
 - Prints from Orca will show the print screen
 - SSH access for customization (user: **root**, password: **rockchip**)
 - OTA Rinkhals updates
-- [Apps system](https://github.com/rinkhals-community/Rinkhals.apps) (OctoEverywhere, Cloudflare, Tailscale, ...)
+- [Apps system](https://github.com/rinkhals-community/Rinkhals.Apps) (OctoEverywhere, Cloudflare, Tailscale, ...)
 
 Latest version will likely support the two latest firmwares from Anycubic, unless specified. For older firmware please check older releases or our [firmware archive](https://rinkhals.firmwareforge.org).
 Here are the supported GoKlipper / K3-family printers and firmwares with the latest Rinkhals release:
@@ -112,11 +112,11 @@ You can find more information in [the documentation](https://rinkhals-community.
 > Those printers are quite weak in terms of CPU and Memory. Every additional app / feature and client you connect to the web interface will make the experience slower and might end up in crashes.<br />
 > Having said that, running your printer with Moonraker, 1\~2 apps and 1\~2 connected clients should work fine.
 
-An apps system is provided in Rinkhals. It allows for the users to easily add some features to their printer. Some default ones are provided and other are available on separate repos like:
-- https://github.com/rinkhals-community/Rinkhals.apps (Tailscale, Cloudflare, OctoApp companion, some progress on vanilla Klipper, ...)
+An apps system is provided in Rinkhals. It allows for the users to easily add some features to their printer. Some default ones ship with every release (Moonraker, Mainsail, Fluidd, mjpg-streamer, Remote display via VNC, Hostname/mDNS, the opt-in Firmware Collector, and the Rinkhals monitor for MQTT) and additional community apps are available on separate repos like:
+- https://github.com/rinkhals-community/Rinkhals.Apps (Tailscale, Cloudflare Tunnel, OctoApp, OctoEverywhere, NFS mount, stunnel, vanilla Klipper, and more)
 - https://github.com/basvd/Rinkhals.WebUI (a web interface for Rinkhals)
 
-Instructions on how to install or develop apps are on the other repo as well.
+The default apps are listed in detail under [Features and built-in apps](https://rinkhals-community.github.io/Rinkhals/about/#features-and-built-in-apps) in the documentation. Instructions on how to install or develop apps live in the Rinkhals.Apps repository.
 
 
 <p align="center">
