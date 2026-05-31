@@ -30,7 +30,11 @@ func builtinAppPath() string {
 }
 
 // AppProperty mirrors a single entry in app.json's "properties" object,
-// augmented with the resolved current value.
+// augmented with the resolved current value. The Advanced flag is a UI hint -
+// advanced properties are hidden from the default Configure drawer view and
+// only revealed when the user opts in to "Show advanced settings". It is not
+// a security boundary; the same authenticated user can still write through
+// the API directly.
 type AppProperty struct {
 	Key        string   `json:"key"`
 	Display    string   `json:"display"`
@@ -39,6 +43,7 @@ type AppProperty struct {
 	Default    string   `json:"default"`
 	Value      string   `json:"value"`
 	Overridden bool     `json:"overridden"`
+	Advanced   bool     `json:"advanced,omitempty"`
 }
 
 // AppRequirements mirrors the optional "requirements" object.
@@ -212,6 +217,9 @@ func buildProperties(manifest *AppManifest, userCfg map[string]string) []AppProp
 				}
 			}
 		}
+		if v, ok := raw["advanced"].(bool); ok {
+			p.Advanced = v
+		}
 		if override, has := userCfg[key]; has {
 			p.Value = override
 			p.Overridden = true
@@ -224,12 +232,17 @@ func buildProperties(manifest *AppManifest, userCfg map[string]string) []AppProp
 	return props
 }
 
-// appNeedsConfiguration reports whether an app has at least one property the
-// user must supply a value for (a property with no default). Apps like that
-// should be configured before they are enabled; apps whose properties all have
-// sensible defaults (or have no properties) are safe to auto-enable.
+// appNeedsConfiguration reports whether an app has at least one *user-facing*
+// property with no default. Apps like that should be configured before they
+// are enabled; apps whose user-facing properties all have sensible defaults
+// (or are advanced-only) are safe to auto-enable. Advanced properties don't
+// count, since they're hidden behind an opt-in toggle and shouldn't gate the
+// install flow.
 func appNeedsConfiguration(manifest *AppManifest) bool {
 	for _, p := range buildProperties(manifest, nil) {
+		if p.Advanced {
+			continue
+		}
 		if strings.TrimSpace(p.Default) == "" {
 			return true
 		}

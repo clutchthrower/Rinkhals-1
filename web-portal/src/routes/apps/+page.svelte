@@ -28,6 +28,7 @@
 		default: string;
 		value: string;
 		overridden: boolean;
+		advanced?: boolean;
 	};
 
 	type App = {
@@ -68,6 +69,26 @@
 	const apiHost = import.meta.env.DEV ? "http://localhost:8080" : "";
 
 	let tab = $state<"installed" | "catalog">("installed");
+
+	// Show-advanced is UX gating, not a security boundary. Persisted so the
+	// preference survives reloads; default off so the typical user sees only
+	// the knobs the app author considered safe to expose.
+	let showAdvanced = $state(false);
+	if (typeof window !== "undefined") {
+		showAdvanced = window.localStorage.getItem("rinkhals-show-advanced") === "1";
+	}
+	$effect(() => {
+		if (typeof window === "undefined") return;
+		window.localStorage.setItem("rinkhals-show-advanced", showAdvanced ? "1" : "0");
+	});
+
+	// A property is shown when it isn't advanced, or when the user has opted in.
+	function visibleProperties(props: Property[]): Property[] {
+		return props.filter((p) => showAdvanced || !p.advanced);
+	}
+	function hasVisibleProperties(app: App): boolean {
+		return visibleProperties(app.properties).length > 0;
+	}
 
 	let apps = $state<App[]>([]);
 	let loading = $state(true);
@@ -461,6 +482,13 @@
 					<option value="system">System</option>
 					<option value="user">User</option>
 				</select>
+				<label
+					class="inline-flex items-center gap-2 px-3 py-2 bg-canvas border border-line-soft rounded-lg text-sm text-ink-2 cursor-pointer select-none"
+					title="Reveal advanced settings in the Configure drawer"
+				>
+					<input type="checkbox" bind:checked={showAdvanced} class="rounded border-line text-brand focus:ring-brand/30" />
+					<span>Advanced</span>
+				</label>
 			{:else}
 				<div class="relative">
 					<Search class="absolute left-3 top-1/2 -translate-y-1/2 text-ink-faint" size={15} />
@@ -608,14 +636,14 @@
 								</button>
 							{/if}
 						{/if}
-						{#if app.properties && app.properties.length > 0}
+						{#if hasVisibleProperties(app)}
 							<button
 								type="button"
 								onclick={() => openConfigure(app)}
 								class="ml-auto flex items-center gap-1.5 px-2.5 py-1.5 bg-canvas hover:bg-brand-soft border border-line-soft rounded-lg text-xs font-medium text-brand transition-colors"
 							>
 								<Sliders size={13} /> Configure
-								{#if app.properties.some((p) => p.overridden)}
+								{#if visibleProperties(app.properties).some((p) => p.overridden)}
 									<span class="ml-1 inline-block w-1.5 h-1.5 rounded-full bg-accent" title="Has overrides"></span>
 								{/if}
 							</button>
@@ -776,10 +804,16 @@
 						This app is installed but disabled. Adjust any settings below, then use <span class="font-medium">Enable app</span> to start it.
 					</div>
 				{/if}
-				{#if app.properties.length === 0}
-					<p class="text-ink-muted text-sm italic">This app has no configurable properties.</p>
+				{#if visibleProperties(app.properties).length === 0}
+					<p class="text-ink-muted text-sm italic">
+						{#if app.properties.length > 0}
+							This app has only advanced settings. Enable <span class="font-medium">Advanced</span> on the Apps page to see them.
+						{:else}
+							This app has no configurable properties.
+						{/if}
+					</p>
 				{:else}
-					{#each app.properties as prop (prop.key)}
+					{#each visibleProperties(app.properties) as prop (prop.key)}
 						<div class="space-y-1.5">
 							<div class="flex items-center justify-between gap-2">
 								<label for="prop-{prop.key}" class="text-sm font-medium text-ink">
@@ -843,6 +877,11 @@
 							</p>
 						</div>
 					{/each}
+				{/if}
+				{#if visibleProperties(app.properties).length > 0 && app.properties.length > visibleProperties(app.properties).length}
+					<p class="text-[11px] text-ink-faint italic pt-2 border-t border-line-soft">
+						{app.properties.length - visibleProperties(app.properties).length} advanced setting{app.properties.length - visibleProperties(app.properties).length === 1 ? "" : "s"} hidden. Toggle <span class="font-medium">Advanced</span> on the Apps page to reveal them.
+					</p>
 				{/if}
 			</div>
 
