@@ -2,6 +2,7 @@
 	import { onMount, onDestroy } from "svelte";
 	import QRCode from "qrcode";
 	import ReportField from "$lib/ReportField.svelte";
+	import { printerState } from "$lib/printerState";
 	import {
 		Boxes,
 		Play,
@@ -664,6 +665,18 @@
 		</div>
 	</header>
 
+	{#if !$printerState.can_install}
+		<div class="bg-surface-warm border border-accent/40 rounded-xl px-4 py-3 flex items-start gap-3">
+			<AlertCircle size={18} class="text-accent shrink-0 mt-0.5" />
+			<div class="flex-1 text-sm">
+				<p class="font-medium text-ink">Printer is busy</p>
+				<p class="text-ink-muted mt-0.5">
+					{$printerState.reason ?? "A print is in progress"}. Installs and uninstalls are disabled until the print completes. App start, stop, restart, and Configure remain available.
+				</p>
+			</div>
+		</div>
+	{/if}
+
 	{#if tab === "installed"}
 	{#if error}
 		<div class="bg-surface-accent border border-coral/40 rounded-xl px-4 py-3 text-coral text-sm flex items-center gap-2">
@@ -789,10 +802,10 @@
 							<button
 								type="button"
 								onclick={() => confirmUninstall(app)}
-								disabled={isBusy}
-								title="Uninstall this app"
+								disabled={isBusy || !$printerState.can_install}
+								title={!$printerState.can_install ? "Disabled while printer is busy" : "Uninstall this app"}
 								aria-label="Uninstall {app.name}"
-								class="{hasVisibleProperties(app) ? '' : 'ml-auto '}p-1.5 rounded-lg text-ink-faint hover:text-coral hover:bg-surface-accent transition-colors disabled:opacity-50"
+								class="{hasVisibleProperties(app) ? '' : 'ml-auto '}p-1.5 rounded-lg text-ink-faint hover:text-coral hover:bg-surface-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
 							>
 								<Trash2 size={14} />
 							</button>
@@ -911,8 +924,9 @@
 								<button
 									type="button"
 									onclick={() => installCatalogApp(entry)}
-									disabled={installing}
-									class="flex items-center gap-1.5 px-2.5 py-1.5 bg-surface hover:bg-surface-warm border border-line-soft rounded-lg text-xs font-medium text-ink-2 disabled:opacity-50 transition-colors"
+									disabled={installing || !$printerState.can_install}
+									title={!$printerState.can_install ? "Disabled while printer is busy" : "Reinstall this app"}
+									class="flex items-center gap-1.5 px-2.5 py-1.5 bg-surface hover:bg-surface-warm border border-line-soft rounded-lg text-xs font-medium text-ink-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
 								>
 									{#if installing}
 										<Loader2 size={13} class="animate-spin" /> Reinstalling...
@@ -924,8 +938,9 @@
 								<button
 									type="button"
 									onclick={() => installCatalogApp(entry)}
-									disabled={installing}
-									class="flex items-center gap-1.5 px-2.5 py-1.5 bg-brand hover:bg-brand-hover text-white rounded-lg text-xs font-medium disabled:opacity-50 transition-colors"
+									disabled={installing || !$printerState.can_install}
+									title={!$printerState.can_install ? "Disabled while printer is busy" : (upgradeAvailable ? "Upgrade to the latest version" : "Install this app")}
+									class="flex items-center gap-1.5 px-2.5 py-1.5 bg-brand hover:bg-brand-hover text-white rounded-lg text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
 								>
 									{#if installing}
 										<Loader2 size={13} class="animate-spin" /> Installing...
@@ -1203,8 +1218,9 @@
 				<button
 					type="button"
 					onclick={performUninstall}
-					disabled={uninstallRunning}
-					class="px-4 py-2 rounded-lg font-medium bg-coral hover:opacity-90 text-white flex items-center gap-2 disabled:opacity-50"
+					disabled={uninstallRunning || !$printerState.can_install}
+					title={!$printerState.can_install ? "Disabled while printer is busy" : ""}
+					class="px-4 py-2 rounded-lg font-medium bg-coral hover:opacity-90 text-white flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
 				>
 					{#if uninstallRunning}
 						<Loader2 size={14} class="animate-spin" />
