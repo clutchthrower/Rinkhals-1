@@ -93,7 +93,6 @@
 			<p class="text-xs uppercase tracking-wider text-ink-faint font-medium">Overview</p>
 			<h2 class="text-3xl font-semibold text-ink mt-1 tracking-tight">
 				System status
-				<span class="inline-block w-2 h-2 rounded-full bg-accent align-middle ml-1 mb-1"></span>
 			</h2>
 		</div>
 
