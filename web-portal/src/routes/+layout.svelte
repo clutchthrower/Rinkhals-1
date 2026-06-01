@@ -98,9 +98,6 @@
 				>
 					<Icon size={18} class={active ? "text-brand" : "text-ink-faint"} />
 					<span>{item.label}</span>
-					{#if active}
-						<span class="ml-auto w-1.5 h-1.5 rounded-full bg-accent"></span>
-					{/if}
 				</a>
 			{/each}
 		</nav>
@@ -125,10 +122,6 @@
 					<span class="text-ink-faint">({$resolvedTheme})</span>
 				{/if}
 			</button>
-			<span class="ml-auto text-[11px] text-ink-faint">
-				<span class="inline-block w-1.5 h-1.5 rounded-full bg-accent align-middle mr-1"></span>
-				dev
-			</span>
 		</div>
 	</aside>
 
