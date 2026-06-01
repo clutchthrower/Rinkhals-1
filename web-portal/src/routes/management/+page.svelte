@@ -1,6 +1,7 @@
 <script lang="ts">
     import { RefreshCw, Download, Server, Trash2, AlertTriangle, ShieldAlert, Terminal, Lock, Cpu, CheckCircle2, ArrowUpCircle } from 'lucide-svelte';
     import { firmwareStatus } from "$lib/firmwareStatus";
+    import PatchesCard from "$lib/PatchesCard.svelte";
 
     let loadingAction = $state<string | null>(null);
     let logs = $state<string>('');
@@ -219,6 +220,8 @@
             </div>
         </div>
     </section>
+
+    <PatchesCard />
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         {#each tools as tool}

@@ -13,6 +13,7 @@
 	import { printerState } from "$lib/printerState";
 	import { firmwareStatus } from "$lib/firmwareStatus";
 	import ReleaseNotesModal from "$lib/ReleaseNotesModal.svelte";
+	import InstallModal from "$lib/InstallModal.svelte";
 
 	// ---- Wire-shape types (must match firmware.go) ---------------------------
 
@@ -69,6 +70,38 @@
 		body: string;
 		url: string;
 	} | null>(null);
+
+	// Install modal state. The backend's preflight + commit + SSE handles the
+	// actual flow; this modal just orchestrates the UI around it.
+	let modalInstall = $state<{
+		source: "rinkhals" | "anycubic";
+		version: string;
+		assetUrl: string;
+		title: string;
+		subtitle: string;
+	} | null>(null);
+
+	function openRinkhalsInstall(r: RinkhalsRelease) {
+		if (!r.asset_url) return;
+		modalInstall = {
+			source: "rinkhals",
+			version: r.tag,
+			assetUrl: r.asset_url,
+			title: r.current ? `Reinstall Rinkhals ${r.tag}` : `Install Rinkhals ${r.tag}`,
+			subtitle: r.name || r.tag
+		};
+	}
+
+	function openAnycubicInstall(v: AnycubicVersion) {
+		if (!v.url) return;
+		modalInstall = {
+			source: "anycubic",
+			version: v.version,
+			assetUrl: v.url,
+			title: v.current ? `Reinstall Anycubic ${v.version}` : `Install Anycubic ${v.version}`,
+			subtitle: `Stock firmware ${v.version}`
+		};
+	}
 
 	async function loadAnycubic() {
 		loadingAnycubic = true;
@@ -175,7 +208,6 @@
 	// (the install flow doesn't exist yet) but we still gate on can_install
 	// so the disabled-reason tooltip matches reality when a print is running.
 	const canInstall = $derived($printerState.can_install);
-	const installComingSoonTitle = "Firmware install flow is in development";
 
 	onMount(() => {
 		loadAnycubic();
@@ -354,9 +386,10 @@
 							</button>
 							<button
 								type="button"
-								disabled={true}
-								title={installComingSoonTitle}
-								class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-brand/30 text-white opacity-50 cursor-not-allowed"
+								onclick={() => openRinkhalsInstall(r)}
+								disabled={!canInstall || !r.asset_url}
+								title={!canInstall ? ($printerState.reason || "Disabled while printer is busy") : (!r.asset_url ? "No update bundle available for this printer model" : (r.current ? "Reinstall this Rinkhals release" : "Install this Rinkhals release"))}
+								class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-brand text-white hover:bg-brand-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
 							>
 								<Download size={12} /> {r.current ? "Reinstall" : "Install"}
 							</button>
@@ -413,9 +446,10 @@
 							</button>
 							<button
 								type="button"
-								disabled={true}
-								title={installComingSoonTitle}
-								class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-brand/30 text-white opacity-50 cursor-not-allowed"
+								onclick={() => openAnycubicInstall(v)}
+								disabled={!canInstall || !v.url}
+								title={!canInstall ? ($printerState.reason || "Disabled while printer is busy") : (v.current ? "Reinstall this stock firmware version" : "Install this stock firmware version")}
+								class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-brand text-white hover:bg-brand-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
 							>
 								<Download size={12} /> {v.current ? "Reinstall" : "Install"}
 							</button>
@@ -434,5 +468,16 @@
 		body={modalRelease.body}
 		externalUrl={modalRelease.url}
 		onClose={() => (modalRelease = null)}
+	/>
+{/if}
+
+{#if modalInstall}
+	<InstallModal
+		source={modalInstall.source}
+		version={modalInstall.version}
+		assetUrl={modalInstall.assetUrl}
+		title={modalInstall.title}
+		subtitle={modalInstall.subtitle}
+		onClose={() => (modalInstall = null)}
 	/>
 {/if}

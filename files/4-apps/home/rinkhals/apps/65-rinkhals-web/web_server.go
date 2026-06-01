@@ -412,6 +412,11 @@ func startWebServer() {
 	mux.HandleFunc("/api/firmware/anycubic", handleFirmwareAnycubic)
 	mux.HandleFunc("/api/firmware/rinkhals", handleFirmwareRinkhals)
 	mux.HandleFunc("/api/firmware/refresh", handleFirmwareRefresh)
+	mux.HandleFunc("/api/firmware/patches", handlePatchesList)
+	mux.HandleFunc("/api/firmware/install/preflight", handleInstallPreflight)
+	mux.HandleFunc("/api/firmware/install/commit", handleInstallCommit)
+	mux.HandleFunc("/api/firmware/install/state", handleInstallState)
+	mux.HandleFunc("/api/firmware/install/progress", handleInstallProgress)
 
 	mux.Handle("/", http.FileServer(http.FS(uiFS)))
 
