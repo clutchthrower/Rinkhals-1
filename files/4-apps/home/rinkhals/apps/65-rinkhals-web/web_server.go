@@ -408,6 +408,10 @@ func startWebServer() {
 	mux.HandleFunc("/api/catalog/refresh", handleCatalogRefresh)
 	mux.HandleFunc("/api/catalog/", handleCatalogInstall)
 	mux.HandleFunc("/api/printer/state", handlePrinterState)
+	mux.HandleFunc("/api/firmware/status", handleFirmwareStatus)
+	mux.HandleFunc("/api/firmware/anycubic", handleFirmwareAnycubic)
+	mux.HandleFunc("/api/firmware/rinkhals", handleFirmwareRinkhals)
+	mux.HandleFunc("/api/firmware/refresh", handleFirmwareRefresh)
 
 	mux.Handle("/", http.FileServer(http.FS(uiFS)))
 

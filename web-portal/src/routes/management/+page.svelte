@@ -1,5 +1,6 @@
 <script lang="ts">
-    import { RefreshCw, Download, Server, Trash2, AlertTriangle, ShieldAlert, Terminal, Lock } from 'lucide-svelte';
+    import { RefreshCw, Download, Server, Trash2, AlertTriangle, ShieldAlert, Terminal, Lock, Cpu, CheckCircle2, ArrowUpCircle } from 'lucide-svelte';
+    import { firmwareStatus } from "$lib/firmwareStatus";
 
     let loadingAction = $state<string | null>(null);
     let logs = $state<string>('');
@@ -157,6 +158,67 @@
         <h2 class="text-3xl font-semibold text-ink mt-1 tracking-tight">System management</h2>
         <p class="text-ink-muted text-sm mt-2">Perform maintenance tasks and configure the printer console.</p>
     </header>
+
+    <!-- Firmware status card. Read-only summary that links to the Firmware page
+         for the full catalog browse + (eventually) install flow. -->
+    <section class="bg-canvas rounded-xl border border-line-soft p-5">
+        <div class="flex items-start gap-3 mb-4">
+            <div class="w-11 h-11 rounded-lg bg-brand-soft text-brand flex items-center justify-center shrink-0">
+                <Cpu size={20} />
+            </div>
+            <div class="flex-1 min-w-0">
+                <h3 class="text-base font-semibold text-ink">Firmware status</h3>
+                <p class="text-ink-muted text-sm mt-1">
+                    Current versions installed on this {$firmwareStatus.model_name || "printer"}.
+                </p>
+            </div>
+            <a
+                href="/firmware"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-line-soft text-ink-muted hover:bg-surface-warm hover:text-ink transition-colors shrink-0"
+            >
+                Open Firmware
+            </a>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="rounded-lg border border-line-soft bg-surface px-4 py-3">
+                <div class="text-xs uppercase tracking-wider text-ink-faint mb-1">Anycubic firmware</div>
+                <div class="text-lg font-semibold text-ink">{$firmwareStatus.current_firmware || "Unknown"}</div>
+                {#if $firmwareStatus.latest_firmware}
+                    <div class="mt-1 text-xs text-ink-muted flex items-center gap-1.5 flex-wrap">
+                        <span>Latest: <span class="text-ink">{$firmwareStatus.latest_firmware}</span></span>
+                        {#if $firmwareStatus.firmware_update_available}
+                            <span class="inline-flex items-center gap-1 text-brand">
+                                <ArrowUpCircle size={12} /> Update available
+                            </span>
+                        {:else}
+                            <span class="inline-flex items-center gap-1 text-emerald">
+                                <CheckCircle2 size={12} /> Up to date
+                            </span>
+                        {/if}
+                    </div>
+                {/if}
+            </div>
+            <div class="rounded-lg border border-line-soft bg-surface px-4 py-3">
+                <div class="text-xs uppercase tracking-wider text-ink-faint mb-1">Rinkhals</div>
+                <div class="text-lg font-semibold text-ink">{$firmwareStatus.current_rinkhals || "Unknown"}</div>
+                {#if $firmwareStatus.latest_rinkhals}
+                    <div class="mt-1 text-xs text-ink-muted flex items-center gap-1.5 flex-wrap">
+                        <span>Latest: <span class="text-ink">{$firmwareStatus.latest_rinkhals}</span></span>
+                        {#if $firmwareStatus.rinkhals_update_available}
+                            <span class="inline-flex items-center gap-1 text-brand">
+                                <ArrowUpCircle size={12} /> Update available
+                            </span>
+                        {:else}
+                            <span class="inline-flex items-center gap-1 text-emerald">
+                                <CheckCircle2 size={12} /> Up to date
+                            </span>
+                        {/if}
+                    </div>
+                {/if}
+            </div>
+        </div>
+    </section>
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         {#each tools as tool}

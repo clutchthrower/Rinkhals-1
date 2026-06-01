@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount, onDestroy } from "svelte";
-	import { Box, Video, MonitorPlay, Activity, Cpu, HardDrive, Printer, Thermometer, ExternalLink } from "lucide-svelte";
+	import { Box, Video, MonitorPlay, Activity, Cpu, HardDrive, Printer, Thermometer, ExternalLink, ArrowUpCircle } from "lucide-svelte";
+	import { firmwareStatus } from "$lib/firmwareStatus";
 
 	type AppInfo = { id: string; name: string; url?: string; port: string; icon: any; status: string; accent: string; };
 
@@ -97,7 +98,7 @@
 		</div>
 
 		{#if printer}
-			<div class="flex items-center gap-2 text-sm">
+			<div class="flex items-center gap-2 text-sm flex-wrap">
 				<span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface-warm border border-accent/30 text-ink">
 					<Printer size={15} class={printer.state === 'printing' ? 'text-accent animate-pulse' : 'text-ink-muted'} />
 					<span class="font-medium">{printer.state.toUpperCase()}</span>
@@ -106,10 +107,32 @@
 					<Thermometer size={15} class="text-coral" />
 					{printer.hotendTemp.toFixed(1)}° / {printer.bedTemp.toFixed(1)}°
 				</span>
+				{#if $firmwareStatus.firmware_update_available || $firmwareStatus.rinkhals_update_available}
+					<a
+						href="/firmware"
+						class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-brand-soft border border-brand/30 text-brand text-sm hover:bg-brand hover:text-white transition-colors"
+						title="Open the Firmware page"
+					>
+						<ArrowUpCircle size={14} />
+						<span class="font-medium">Firmware update available</span>
+					</a>
+				{/if}
 			</div>
 		{:else}
-			<div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-canvas border border-line-soft text-ink-muted text-sm">
-				<Printer size={15} /> Moonraker offline
+			<div class="flex items-center gap-2 text-sm flex-wrap">
+				<div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-canvas border border-line-soft text-ink-muted">
+					<Printer size={15} /> Moonraker offline
+				</div>
+				{#if $firmwareStatus.firmware_update_available || $firmwareStatus.rinkhals_update_available}
+					<a
+						href="/firmware"
+						class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-brand-soft border border-brand/30 text-brand hover:bg-brand hover:text-white transition-colors"
+						title="Open the Firmware page"
+					>
+						<ArrowUpCircle size={14} />
+						<span class="font-medium">Firmware update available</span>
+					</a>
+				{/if}
 			</div>
 		{/if}
 	</header>
