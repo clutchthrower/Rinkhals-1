@@ -123,6 +123,7 @@ chmod +x ./usr/sbin/* 2> /dev/null
 chmod +x ./usr/libexec/* 2> /dev/null
 chmod +x ./usr/share/scripts/* 2> /dev/null
 chmod +x ./usr/share/udhcpc/default.script.d/lease-file.script
+chmod +x ./usr/share/udhcpc/default.script.d/rinkhals-dns-fallback.script
 chmod +x ./usr/libexec/gcc/arm-buildroot-linux-uclibcgnueabihf/11.4.0/* 2> /dev/null
 chmod +x ./opt/rinkhals/*/*.sh 2> /dev/null
 
