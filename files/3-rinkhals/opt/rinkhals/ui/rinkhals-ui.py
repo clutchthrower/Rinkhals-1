@@ -1415,9 +1415,16 @@ class RinkhalsUiApp(BaseApp):
         self.show_modal(self.modal_store_install)
 
         def do_install():
+            import shutil
             target_dir = f'{RINKHALS_HOME}/apps/{app_dir}'
+            temp_dir = f'{RINKHALS_HOME}/apps/.installing-{app_dir}'
             api_url = f'https://api.github.com/repos/{self.APP_STORE_REPO}/contents/apps/{app_dir}'
             api_headers = {'User-Agent': 'Rinkhals-AppStore/1.0'}
+
+            # Clean up any leftover partial install
+            if os.path.exists(temp_dir):
+                shutil.rmtree(temp_dir)
+            os.makedirs(temp_dir, exist_ok=True)
 
             try:
                 import requests
@@ -1444,6 +1451,7 @@ class RinkhalsUiApp(BaseApp):
 
                 total = len(all_files)
                 if total == 0:
+                    shutil.rmtree(temp_dir, ignore_errors=True)
                     with lvr.lock():
                         self.modal_store_install.obj_progress_bar.set_style_bg_color(lvr.COLOR_DANGER, lv.STATE.DEFAULT)
                         self.modal_store_install.label_progress_text.set_text('No files found')
@@ -1452,6 +1460,7 @@ class RinkhalsUiApp(BaseApp):
                 for i, (rel_path, download_url) in enumerate(all_files):
                     if self.modal_store_install.has_flag(lv.OBJ_FLAG.HIDDEN):
                         logging.info('App store install canceled.')
+                        shutil.rmtree(temp_dir, ignore_errors=True)
                         return
 
                     with lvr.lock():
@@ -1459,7 +1468,7 @@ class RinkhalsUiApp(BaseApp):
                         self.modal_store_install.obj_progress_bar.set_width(lv.pct(progress))
                         self.modal_store_install.label_progress_text.set_text(f'{i + 1}/{total}: {rel_path}')
 
-                    file_path = os.path.join(target_dir, rel_path)
+                    file_path = os.path.join(temp_dir, rel_path)
                     os.makedirs(os.path.dirname(file_path), exist_ok=True)
 
                     with requests.get(download_url, headers=api_headers, timeout=120, stream=True) as file_response:
@@ -1471,13 +1480,32 @@ class RinkhalsUiApp(BaseApp):
                     if rel_path.endswith('.sh'):
                         os.chmod(file_path, 0o755)
 
+                # Atomic promotion: replace target with completed temp dir
+                if os.path.exists(target_dir):
+                    shutil.rmtree(target_dir)
+                shutil.move(temp_dir, target_dir)
+
                 with lvr.lock():
                     self.modal_store_install.obj_progress_bar.set_width(lv.pct(100))
                     self.modal_store_install.label_progress_text.set_text('Installed successfully')
                     self.modal_store_install.button_cancel.add_flag(lv.OBJ_FLAG.HIDDEN)
                     self.modal_store_install.button_done.remove_flag(lv.OBJ_FLAG.HIDDEN)
+                    # Refresh detail screen so button shows Remove immediately
+                    self.screen_store_app.button_action.clear_event_cb()
+                    self.screen_store_app.button_action.set_text('Remove')
+                    self.screen_store_app.button_action.set_style_text_color(lvr.COLOR_DANGER, lv.STATE.DEFAULT)
+                    self.screen_store_app.button_action.add_event_cb(
+                        lambda e, d=app_dir, n=app_name: self.show_text_dialog(
+                            f'Remove {n}?\n\nThis will delete all app files.',
+                            action='Remove',
+                            action_color=lvr.COLOR_DANGER,
+                            callback=lambda: self.remove_store_app(d)
+                        ),
+                        lv.EVENT_CODE.CLICKED, None
+                    )
 
             except Exception as ex:
+                shutil.rmtree(temp_dir, ignore_errors=True)
                 logging.error(f'App store install failed: {ex}')
                 with lvr.lock():
                     self.modal_store_install.obj_progress_bar.set_style_bg_color(lvr.COLOR_DANGER, lv.STATE.DEFAULT)

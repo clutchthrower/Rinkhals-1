@@ -22,6 +22,13 @@ jobs:
       contents: write
 
     steps:
+      - name: Validate branch
+        run: |
+          if [ "${{ github.ref_name }}" != "develop" ]; then
+            echo "This workflow must be run from the 'develop' branch (got '${{ github.ref_name }}')"
+            exit 1
+          fi
+
       - name: Checkout
         uses: actions/checkout@v6
         with:
@@ -45,14 +52,6 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Calculated version: $VERSION  (bump type: ${{ inputs.version_bump }})"
 
-      - name: Create and push tag
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag -a "${{ steps.version.outputs.version }}" \
-            -m "Beta build ${{ steps.version.outputs.version }} (${{ inputs.version_bump }} change)"
-          git push origin "${{ steps.version.outputs.version }}"
-
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v4
 
@@ -75,10 +74,16 @@ jobs:
           outputs: type=local,dest=./build/dist
           cache-from: type=registry,ref=ghcr.io/rinkhals-community/rinkhals:buildcache
 
-      - name: Create beta release
+      - name: Create beta release and tag
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "${{ steps.version.outputs.version }}" \
+            -m "Beta build ${{ steps.version.outputs.version }} (${{ inputs.version_bump }} change)"
+          git push origin "${{ steps.version.outputs.version }}"
+
           gh release create "${{ steps.version.outputs.version }}" \
             --repo="$GITHUB_REPOSITORY" \
             --title="Beta ${{ steps.version.outputs.version }} (${{ inputs.version_bump }})" \
