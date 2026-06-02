@@ -225,10 +225,12 @@
 			{:else}
 				{#each sessions as s (s.id)}
 					<div class="absolute inset-0 {s.id === activeId ? '' : 'hidden'}">
-						<!-- pb-4 (vs p-3 elsewhere) leaves breathing room under the last
-						     terminal row so the cursor on the bottom prompt isn't clipped
-						     by the outer panel's rounded-xl + overflow-hidden frame. -->
-						<div use:termAttach={s.id} class="absolute inset-0 pt-3 px-3 pb-4"></div>
+						<!-- pb-6 leaves enough clearance under the last terminal row that
+						     the bottom prompt and its descenders sit visibly clear of the
+						     outer panel's rounded-xl + overflow-hidden frame. Earlier
+						     values (p-3, pb-4) were tight enough that the last row read
+						     as touching the rounded corner. -->
+						<div use:termAttach={s.id} class="absolute inset-0 pt-3 px-3 pb-6"></div>
 					</div>
 				{/each}
 			{/if}
