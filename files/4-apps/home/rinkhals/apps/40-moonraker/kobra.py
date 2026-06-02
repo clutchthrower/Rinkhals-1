@@ -1461,7 +1461,7 @@ class Kobra:
             try:
                 self.server.send_event(
                     'server:gcode_response',
-                    message + '\n'
+                    message
                 )
             except Exception as e:
                 logging.warning(f'[Kobra] Could not emit gcode_response: {e!r}')
