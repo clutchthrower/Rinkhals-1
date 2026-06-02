@@ -225,7 +225,10 @@
 			{:else}
 				{#each sessions as s (s.id)}
 					<div class="absolute inset-0 {s.id === activeId ? '' : 'hidden'}">
-						<div use:termAttach={s.id} class="absolute inset-0 p-3"></div>
+						<!-- pb-4 (vs p-3 elsewhere) leaves breathing room under the last
+						     terminal row so the cursor on the bottom prompt isn't clipped
+						     by the outer panel's rounded-xl + overflow-hidden frame. -->
+						<div use:termAttach={s.id} class="absolute inset-0 pt-3 px-3 pb-4"></div>
 					</div>
 				{/each}
 			{/if}
