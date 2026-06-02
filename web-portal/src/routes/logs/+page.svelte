@@ -22,7 +22,7 @@
         logs = [];
 
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const hostname = typeof window !== 'undefined' ? window.location.host : 'localhost:8080';
+        const hostname = typeof window !== 'undefined' ? window.location.host : 'localhost:8090';
         ws = new WebSocket(`${protocol}//${hostname}/api/logstream?path=${encodeURIComponent(activeLog)}`);
 
         ws.onmessage = (event) => {

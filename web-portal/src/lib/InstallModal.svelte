@@ -48,7 +48,7 @@
 
 	let { source, version, assetUrl, title, subtitle, onClose }: Props = $props();
 
-	const apiHost = import.meta.env.DEV ? "http://localhost:8080" : "";
+	const apiHost = import.meta.env.DEV ? "http://localhost:8090" : "";
 
 	type Phase = "preflighting" | "confirm" | "starting" | "running" | "rebooting" | "complete" | "failed";
 
@@ -115,7 +115,7 @@
 		// EventSource carries cookies but not Authorization header. The backend
 		// uses basic auth - because our session is already authenticated and the
 		// browser holds the credentials for that origin, EventSource reuses them
-		// on same-origin requests. In dev mode (cross-origin to localhost:8080)
+		// on same-origin requests. In dev mode (cross-origin to localhost:8090)
 		// the user will need to allow credentials separately; that's fine for
 		// production usage where everything is same-origin.
 		eventSource = new EventSource(`${apiHost}/api/firmware/install/progress`);

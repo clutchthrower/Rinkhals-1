@@ -521,22 +521,17 @@ func handleApp(w http.ResponseWriter, r *http.Request) {
 // --- helpers ---
 
 func writeJSONHeaders(w http.ResponseWriter) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Content-Type", "application/json")
 }
 
-// corsPreflight answers a CORS OPTIONS preflight and reports whether it handled
-// the request. On-device the UI is same-origin so this never fires; it exists so
-// PUT/DELETE/POST work from the cross-origin Vite dev server (5173 -> 8080).
+// corsPreflight reports whether this is an OPTIONS preflight so the handler can
+// return early. CORS headers and the preflight 204 are emitted centrally in
+// corsMiddleware (which runs before auth); this only short-circuits the handler
+// body. The cross-origin caller is the Vite dev server (5173 -> 8090); on-device
+// the UI is same-origin so this never fires. The methods arg is retained for
+// call-site documentation.
 func corsPreflight(w http.ResponseWriter, r *http.Request, methods string) bool {
-	if r.Method != http.MethodOptions {
-		return false
-	}
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", methods)
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-	w.WriteHeader(http.StatusNoContent)
-	return true
+	return r.Method == http.MethodOptions
 }
 
 func runAppHelper(w http.ResponseWriter, helper, id string) {

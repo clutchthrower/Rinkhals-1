@@ -434,7 +434,6 @@ func handleInstallProgress(w http.ResponseWriter, r *http.Request) {
 	h.Set("Content-Type", "text/event-stream")
 	h.Set("Cache-Control", "no-cache")
 	h.Set("Connection", "keep-alive")
-	h.Set("Access-Control-Allow-Origin", "*")
 	flusher, ok := w.(http.Flusher)
 	if !ok {
 		http.Error(w, "Streaming unsupported", http.StatusInternalServerError)

@@ -48,7 +48,7 @@
 		fetched_at: string;
 	}
 
-	const apiHost = import.meta.env.DEV ? "http://localhost:8080" : "";
+	const apiHost = import.meta.env.DEV ? "http://localhost:8090" : "";
 
 	type Tab = "anycubic" | "rinkhals";
 	let tab = $state<Tab>("rinkhals");

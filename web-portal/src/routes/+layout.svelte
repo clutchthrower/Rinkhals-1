@@ -31,7 +31,7 @@
 
 	onMount(async () => {
 		try {
-			const host = import.meta.env.DEV ? "http://localhost:8080" : "";
+			const host = import.meta.env.DEV ? "http://localhost:8090" : "";
 			const res = await fetch(`${host}/api/auth/status`);
 			if (res.ok) {
 				const data = await res.json();
@@ -55,7 +55,7 @@
 			return;
 		}
 		try {
-			const host = import.meta.env.DEV ? "http://localhost:8080" : "";
+			const host = import.meta.env.DEV ? "http://localhost:8090" : "";
 			const res = await fetch(`${host}/api/auth/change`, {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },

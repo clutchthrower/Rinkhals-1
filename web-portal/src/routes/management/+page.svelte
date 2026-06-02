@@ -116,7 +116,7 @@
         authSaving = true;
         try {
             const creds = btoa(`${p_username}:${p_current}`);
-            const host = import.meta.env.DEV ? "http://localhost:8080" : "";
+            const host = import.meta.env.DEV ? "http://localhost:8090" : "";
             const testRes = await fetch(`${host}/api/auth/status`, {
                 headers: { 'Authorization': `Basic ${creds}` }
             });

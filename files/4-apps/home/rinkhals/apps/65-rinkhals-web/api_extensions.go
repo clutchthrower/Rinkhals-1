@@ -16,7 +16,6 @@ import (
 
 
 func handleMetrics(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Content-Type", "application/json")
 
 	uptimeBytes, _ := ioutil.ReadFile("/proc/uptime")
@@ -55,12 +54,6 @@ func handleMetrics(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleSaveFile(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	if r.Method == "OPTIONS" {
-		w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-		return
-	}
 
 	var req struct {
 		Path    string `json:"path"`
@@ -74,13 +67,7 @@ func handleSaveFile(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleServices(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Content-Type", "application/json")
-	if r.Method == "OPTIONS" {
-		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-		return
-	}
 
 	if r.Method == "GET" {
 		services := []map[string]string{

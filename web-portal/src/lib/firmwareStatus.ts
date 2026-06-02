@@ -13,7 +13,7 @@ export interface FirmwareStatusResponse {
 	notice?: string;
 }
 
-const apiHost = import.meta.env.DEV ? "http://localhost:8080" : "";
+const apiHost = import.meta.env.DEV ? "http://localhost:8090" : "";
 
 const initialStatus: FirmwareStatusResponse = {
 	model_code: "",

@@ -174,7 +174,6 @@ func handleFilesList(w http.ResponseWriter, r *http.Request) {
 		return strings.ToLower(files[i].Name) < strings.ToLower(files[j].Name)
 	})
 
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(files)
 }
@@ -187,7 +186,6 @@ func handleFileDownload(w http.ResponseWriter, r *http.Request) {
 	}
 	requestedPath = filepath.Clean(requestedPath)
 
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 	http.ServeFile(w, r, requestedPath)
 }
 
@@ -267,8 +265,6 @@ func handleTools(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-
 	var scriptPath string
 	switch action {
 	case "debug-bundle":
@@ -311,13 +307,7 @@ type FsRequest struct {
 }
 
 func handleFileSystem(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Content-Type", "application/json")
-	if r.Method == "OPTIONS" {
-		w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-		return
-	}
 
 	if r.Method != "POST" {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -393,6 +383,36 @@ func getCredentials() (string, string) {
 	return "admin", "rinkhals" // fallback
 }
 
+// allowedOrigins are the cross-origin callers permitted to reach the API.
+// On-device the UI is served same-origin (no Origin header, no CORS needed);
+// the only legitimate cross-origin caller is the Vite dev server. We reflect a
+// specific origin rather than "*" so credentialed requests (Basic auth /
+// EventSource cookies) work, which a wildcard forbids.
+var allowedOrigins = map[string]bool{
+	"http://localhost:5173": true, // vite dev server
+	"http://127.0.0.1:5173": true,
+}
+
+// corsMiddleware owns all CORS handling and must wrap basicAuthMiddleware on the
+// outside: browser preflight (OPTIONS) requests carry no credentials, so they
+// have to be answered before auth runs or they would 401.
+func corsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if origin := r.Header.Get("Origin"); allowedOrigins[origin] {
+			w.Header().Set("Access-Control-Allow-Origin", origin)
+			w.Header().Set("Access-Control-Allow-Credentials", "true")
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+			w.Header().Add("Vary", "Origin")
+		}
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
 func basicAuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		expectedUser, expectedPass := getCredentials()
@@ -409,7 +429,6 @@ func basicAuthMiddleware(next http.Handler) http.Handler {
 }
 
 func handleAuthStatus(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 	user, pass := getCredentials()
 	isDefault := (user == "admin" && pass == "rinkhals")
 
@@ -418,12 +437,6 @@ func handleAuthStatus(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleAuthChange(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	if r.Method == "OPTIONS" {
-		w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-		return
-	}
 	if r.Method != "POST" {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -486,9 +499,9 @@ func startWebServer() {
 
 	log.Println("Starting Rinkhals Web Portal on :8090")
 
-	protectedMux := basicAuthMiddleware(mux)
+	handler := corsMiddleware(basicAuthMiddleware(mux))
 
-	if err := http.ListenAndServe(":8090", protectedMux); err != nil {
+	if err := http.ListenAndServe(":8090", handler); err != nil {
 		log.Fatalf("HTTP server failed: %v", err)
 	}
 }
