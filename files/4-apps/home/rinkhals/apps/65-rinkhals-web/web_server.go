@@ -32,10 +32,22 @@ var upgrader = websocket.Upgrader{
 type FileInfo struct {
 	Name     string `json:"name"`
 	Path     string `json:"path"`
+	// Type is one of "file", "folder", "link". A symlink reports type "link"
+	// regardless of what it points at; the UI decides navigation behaviour
+	// based on TargetType (see below).
 	Type     string `json:"type"`
 	Size     int64  `json:"size"`
 	Modified string `json:"modified"`
 	IsText   bool   `json:"isText"`
+	// LinkTarget is set only when Type == "link". The raw symlink target as
+	// stored on disk (relative or absolute - we don't resolve it here, so the
+	// UI shows the same string `ls -l` would print). Empty otherwise.
+	LinkTarget string `json:"linkTarget,omitempty"`
+	// TargetType is set only when Type == "link". One of "file", "folder",
+	// "broken". A loop or an unreachable target also reads as "broken" - we
+	// rely on os.Stat erroring after its internal symlink-depth limit rather
+	// than walking the chain ourselves.
+	TargetType string `json:"targetType,omitempty"`
 }
 
 func isTextFile(path string, info fs.FileInfo) bool {
@@ -92,20 +104,72 @@ func handleFilesList(w http.ResponseWriter, r *http.Request) {
 		}
 
 		filePath := filepath.Join(requestedPath, entry.Name())
+
+		// Symlink handling. entry.Type() reflects the lstat - it tells us
+		// whether THIS entry is a link without following. If it is, we emit a
+		// "link" type and resolve the target's nature separately so the UI can
+		// choose click behaviour (navigate vs open vs disabled-because-broken).
+		var linkTarget, targetType string
+		if entry.Type()&fs.ModeSymlink != 0 {
+			fileType = "link"
+			if t, err := os.Readlink(filePath); err == nil {
+				linkTarget = t
+			}
+			// os.Stat follows the link; ErrNotExist (or any error, really) on
+			// the target reads as broken. Loops are handled by os.Stat itself,
+			// which gives up after a hard-coded symlink depth limit.
+			if targetInfo, err := os.Stat(filePath); err == nil {
+				if targetInfo.IsDir() {
+					targetType = "folder"
+				} else {
+					targetType = "file"
+				}
+			} else {
+				targetType = "broken"
+			}
+		}
+
+		// IsText: only meaningful for things the user can actually open. For a
+		// link, run the same check against the resolved target (os.Open
+		// follows). Broken links get IsText=false trivially.
+		isText := false
+		if fileType == "file" {
+			isText = isTextFile(filePath, info)
+		} else if fileType == "link" && targetType == "file" {
+			isText = isTextFile(filePath, info)
+		}
+
 		files = append(files, FileInfo{
-			Name:     entry.Name(),
-			Path:     filePath,
-			Type:     fileType,
-			Size:     info.Size(),
-			Modified: info.ModTime().Format("2006-01-02 15:04:05"),
-			IsText:   isTextFile(filePath, info),
+			Name:       entry.Name(),
+			Path:       filePath,
+			Type:       fileType,
+			Size:       info.Size(),
+			Modified:   info.ModTime().Format("2006-01-02 15:04:05"),
+			IsText:     isText,
+			LinkTarget: linkTarget,
+			TargetType: targetType,
 		})
 
 	}
 
+	// Sort folders first, then everything else, alphabetically within each
+	// group. Links sort with their effective target type: a link to a folder
+	// sorts with folders, a link to a file (or a broken link) sorts with
+	// files. Keeps day-to-day navigation feeling natural.
+	groupOf := func(f FileInfo) int {
+		switch {
+		case f.Type == "folder":
+			return 0
+		case f.Type == "link" && f.TargetType == "folder":
+			return 0
+		default:
+			return 1
+		}
+	}
 	sort.Slice(files, func(i, j int) bool {
-		if files[i].Type != files[j].Type {
-			return files[i].Type == "folder"
+		gi, gj := groupOf(files[i]), groupOf(files[j])
+		if gi != gj {
+			return gi < gj
 		}
 		return strings.ToLower(files[i].Name) < strings.ToLower(files[j].Name)
 	})

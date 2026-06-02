@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { Folder, FileText, Search, ArrowUp, Download, Trash2, Edit2, FolderPlus, MoveRight, AlertTriangle } from 'lucide-svelte';
+    import { Folder, FileText, Search, ArrowUp, Download, Trash2, Edit2, FolderPlus, MoveRight, AlertTriangle, Link2, Link2Off } from 'lucide-svelte';
     import { onMount } from 'svelte';
 
     let searchQuery = $state('');
@@ -42,6 +42,15 @@
     function handleItemClick(file: any) {
         if (file.type === 'folder') {
             loadFiles(file.path);
+        } else if (file.type === 'link') {
+            // Symlinks resolve to one of three things; treat the link as its
+            // target's nature for click purposes. Broken links don't navigate.
+            if (file.targetType === 'folder') {
+                loadFiles(file.path);
+            }
+            // file.targetType === 'file': click is a no-op; the row's
+            //   Edit/Download buttons handle file actions.
+            // file.targetType === 'broken': nothing to do.
         }
     }
 
@@ -208,7 +217,14 @@
                     <tr><td colspan="5" class="px-5 py-8 text-center text-ink-faint">No files found.</td></tr>
                 {:else}
                     {#each filteredFiles as file}
-                        <tr onclick={() => handleItemClick(file)} class="hover:bg-surface-warm transition-colors group cursor-pointer {selectedFiles.has(file.path) ? 'bg-brand-soft/40' : ''}">
+                        {@const isLink = file.type === 'link'}
+                        {@const linkBroken = isLink && file.targetType === 'broken'}
+                        {@const linkToFolder = isLink && file.targetType === 'folder'}
+                        {@const linkToFile = isLink && file.targetType === 'file'}
+                        {@const navigable = file.type === 'folder' || linkToFolder}
+                        <tr onclick={() => handleItemClick(file)}
+                            class="hover:bg-surface-warm transition-colors group {navigable || linkToFile ? 'cursor-pointer' : 'cursor-default'} {selectedFiles.has(file.path) ? 'bg-brand-soft/40' : ''} {linkBroken ? 'opacity-60' : ''}"
+                            title={isLink ? `Symlink → ${file.linkTarget}${linkBroken ? ' (broken)' : ''}` : ''}>
                             <td class="px-5 py-3" onclick={(e) => e.stopPropagation()}>
                                 <input type="checkbox"
                                     checked={selectedFiles.has(file.path)}
@@ -217,28 +233,36 @@
                                 />
                             </td>
                             <td class="px-5 py-3">
-                                <div class="flex items-center gap-3 text-ink">
-                                    {#if file.type === 'folder'}
-                                        <Folder size={18} class="text-brand" />
+                                <div class="flex items-center gap-3 text-ink min-w-0">
+                                    {#if linkBroken}
+                                        <Link2Off size={18} class="text-coral shrink-0" />
+                                    {:else if isLink}
+                                        <Link2 size={18} class="text-accent shrink-0" />
+                                    {:else if file.type === 'folder'}
+                                        <Folder size={18} class="text-brand shrink-0" />
                                     {:else if file.name.endsWith('.log')}
-                                        <FileText size={18} class="text-accent" />
+                                        <FileText size={18} class="text-accent shrink-0" />
                                     {:else}
-                                        <FileText size={18} class="text-ink-faint" />
+                                        <FileText size={18} class="text-ink-faint shrink-0" />
                                     {/if}
-                                    <span class="group-hover:text-brand transition-colors text-sm">{file.name}</span>
+                                    <span class="group-hover:text-brand transition-colors text-sm truncate {linkBroken ? 'line-through' : ''}">{file.name}</span>
+                                    {#if isLink && file.linkTarget}
+                                        <span class="text-ink-faint text-xs truncate">&rarr; {file.linkTarget}{linkBroken ? ' (broken)' : ''}</span>
+                                    {/if}
                                 </div>
                             </td>
                             <td class="px-5 py-3 text-ink-muted text-sm">
-                                {file.type === 'folder' ? '—' : (file.size / 1024).toFixed(1) + ' KB'}
+                                {navigable ? '—' : isLink ? '—' : (file.size / 1024).toFixed(1) + ' KB'}
                             </td>
                             <td class="px-5 py-3 text-ink-muted text-sm hidden sm:table-cell">{file.modified}</td>
                             <td class="px-5 py-3 text-right">
-                                {#if file.type === 'file'}
+                                {#if file.type === 'file' || linkToFile}
                                     {#if file.isText}
                                         <a
                                             href="/editor?path={encodeURIComponent(file.path)}"
                                             class="inline-block p-1.5 text-ink-muted hover:text-brand hover:bg-brand-soft rounded-lg transition-colors mr-1"
                                             title="Edit File"
+                                            onclick={(e) => e.stopPropagation()}
                                         >
                                             <Edit2 size={16} />
                                         </a>
