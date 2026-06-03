@@ -18,6 +18,10 @@ if [ -e /mnt/udisk ]; then
     cp /useremain/config-backup-${DATE}.zip /mnt/udisk/config-backup-${DATE}.zip
 fi
 
+# Read mute flag before deleting Rinkhals directory
+MUTE_SOUNDS=0
+[ -f /useremain/rinkhals/.mute-sounds ] && MUTE_SOUNDS=1
+
 # Stop Rinkhals if needed
 if [ -e /useremain/rinkhals/.current/stop.sh ]; then
     chmod +x /useremain/rinkhals/.current/stop.sh
@@ -35,7 +39,7 @@ if [ -f /userdata/app/gk/restart_k3c.sh ]; then
 fi
 
 # Play ok jingle to notify completion
-if [ ! -f /useremain/rinkhals/.mute-sounds ]; then
+if [ "$MUTE_SOUNDS" = "0" ]; then
     B=/sys/class/pwm/pwmchip0/pwm0
     echo 0 > $B/enable; echo 0 > $B/duty_cycle
     echo 2551000 > $B/period; echo 1020400 > $B/duty_cycle; echo 1 > $B/enable

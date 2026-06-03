@@ -251,7 +251,7 @@ class RinkhalsUiApp(BaseApp):
             button_store.set_text('App Store')
             button_store.add_event_cb(lambda e: self.show_screen(self.screen_store), lv.EVENT_CODE.CLICKED, None)
 
-            # Bottom row: Install & Updates | Advanced settings
+            # Bottom row: Updates | Settings
             panel_row2 = lvr.panel(self.screen_main, flex_flow=lv.FLEX_FLOW.ROW)
             panel_row2.set_width(lv.pct(100))
             panel_row2.set_style_pad_column(lvr.get_global_margin(), lv.STATE.DEFAULT)
@@ -471,10 +471,13 @@ class RinkhalsUiApp(BaseApp):
                 checkbox_sounds.set_checked(not os.path.exists(MUTE_SOUNDS_FILE))
 
                 def toggle_sounds(e, checkbox=checkbox_sounds):
-                    if os.path.exists(MUTE_SOUNDS_FILE):
-                        os.remove(MUTE_SOUNDS_FILE)
-                    else:
-                        open(MUTE_SOUNDS_FILE, 'wb').close()
+                    try:
+                        if os.path.exists(MUTE_SOUNDS_FILE):
+                            os.remove(MUTE_SOUNDS_FILE)
+                        else:
+                            open(MUTE_SOUNDS_FILE, 'wb').close()
+                    except OSError as ex:
+                        logging.error('Failed to toggle sounds: %s', ex)
                     checkbox.set_checked(not os.path.exists(MUTE_SOUNDS_FILE))
 
                 checkbox_sounds.add_event_cb(toggle_sounds, lv.EVENT_CODE.CLICKED, None)
@@ -1468,7 +1471,10 @@ class RinkhalsUiApp(BaseApp):
                         self.modal_store_install.obj_progress_bar.set_width(lv.pct(progress))
                         self.modal_store_install.label_progress_text.set_text(f'{i + 1}/{total}: {rel_path}')
 
-                    file_path = os.path.join(temp_dir, rel_path)
+                    file_path = os.path.realpath(os.path.join(temp_dir, rel_path))
+                    if not file_path.startswith(os.path.realpath(temp_dir) + os.sep):
+                        logging.warning('Skipping path outside install dir: %s', rel_path)
+                        continue
                     os.makedirs(os.path.dirname(file_path), exist_ok=True)
 
                     with requests.get(download_url, headers=api_headers, timeout=120, stream=True) as file_response:
